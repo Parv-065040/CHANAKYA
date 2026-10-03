@@ -1,0 +1,1023 @@
+[
+ {
+  "question": "How many units did Line A produce in Q1?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "14500"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line A in Q1?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "2.32"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "How many units did Line A produce in Q2?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "17200"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line A in Q2?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "2.60"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "How many units did Line A produce in Q3?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "16800"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line A in Q3?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "2.35"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "How many units did Line A produce in Q4?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "17700"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line A in Q4?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "2.15"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "How many units did Line B produce in Q1?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "13100"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line B in Q1?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "2.74"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "How many units did Line B produce in Q2?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "15600"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line B in Q2?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "4.50"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "How many units did Line B produce in Q3?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "16400"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line B in Q3?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "3.66"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "How many units did Line B produce in Q4?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "17900"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line B in Q4?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "2.91"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "How many units did Line C produce in Q1?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "13600"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line C in Q1?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "2.16"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "How many units did Line C produce in Q2?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "15000"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line C in Q2?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "2.22"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "How many units did Line C produce in Q3?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "16300"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line C in Q3?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "2.40"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "How many units did Line C produce in Q4?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "16700"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the defect rate of Line C in Q4?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "2.44"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was total production volume in Q1?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "41200"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the plant defect rate in Q1?",
+  "doc": "Quality_and_Safety_Manual.pdf",
+  "must": [
+   "2.4"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was total production volume in Q2?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "47800"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the plant defect rate in Q2?",
+  "doc": "Quality_and_Safety_Manual.pdf",
+  "must": [
+   "3.1"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was total production volume in Q3?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "49500"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the plant defect rate in Q3?",
+  "doc": "Quality_and_Safety_Manual.pdf",
+  "must": [
+   "2.8"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was total production volume in Q4?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "52300"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the plant defect rate in Q4?",
+  "doc": "Quality_and_Safety_Manual.pdf",
+  "must": [
+   "2.5"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in Apr FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "10.8"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in May FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "11.9"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in Jun FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "12.3"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in Jul FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "12.6"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in Aug FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "12.3"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in Sep FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "12.8"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in Oct FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "13.5"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in Nov FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "12.8"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in Dec FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "12.4"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in Jan FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "11.9"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in Feb FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "11.9"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was revenue in Mar FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "13.0"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for Manufacturing?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "61.2"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for Quality & Safety?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "7.0"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for Maintenance?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "6.9"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for Supply Chain & Logistics?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "6.2"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for HR?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "8.6"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for Customer Support?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "8.6"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for Finance & Admin?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "4.8"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for IT?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "4.7"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for Sales & Marketing?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "8.0"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for R&D?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "5.6"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for Legal & Compliance?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "1.5"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the FY2026 budget for Facilities?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "4.9"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the FY2025 actual operating expense of Manufacturing?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "54.6"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the FY2025 actual operating expense of Quality & Safety?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "5.4"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the FY2025 actual operating expense of Maintenance?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "6.3"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the FY2025 actual operating expense of Supply Chain & Logistics?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "5.6"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the FY2025 actual operating expense of HR?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "8.1"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was the FY2025 actual operating expense of Customer Support?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "7.9"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was total headcount in Apr?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "1847"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was total headcount in Jul?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "1868"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was total headcount in Oct?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "1890"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was total headcount in Mar?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "1925"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in Apr?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "82.6"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in May?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "72.7"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in Jun?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "100.0"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in Jul?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "91.7"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in Aug?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "88.0"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in Sep?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "80.0"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in Oct?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "90.3"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in Nov?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "95.0"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in Dec?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "92.0"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in Jan?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "96.3"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in Feb?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "90.5"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was P1 SLA compliance in Mar?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "96.4"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What is the first response time for P1 tickets?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "15 minutes"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the resolution target for P1 incidents?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "4 hours"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the first response time for P2 tickets?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "1 hour"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the resolution target for P2 incidents?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "8 hours"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the first response time for P3 tickets?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "4 hours"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the resolution target for P3 incidents?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "3 business days"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the first response time for P4 tickets?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "8 hours"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the resolution target for P4 incidents?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "7 business days"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the P1 first response target for Platinum customers?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "10 minutes"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the P1 first response target for Gold customers?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "15 minutes"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the P1 first response target for Standard customers?",
+  "doc": "SLA_and_Escalation_Handbook.pdf",
+  "must": [
+   "15 minutes"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "How many days of earned leave do employees get?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "24"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "How many days of casual leave do employees get?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "8"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "How many days of sick leave do employees get?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "10"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "How many days of maternity leave do employees get?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "182"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "How many days of paternity leave do employees get?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "10"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the approval limit for the Chief Financial Officer per transaction?",
+  "doc": "Financial_Policies_and_Controls.pdf",
+  "must": [
+   "50"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "Within how many days must expense claims be submitted?",
+  "doc": "Financial_Policies_and_Controls.pdf",
+  "must": [
+   "15"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "How many quotations are needed for purchases above Rs 5 lakh?",
+  "doc": "Financial_Policies_and_Controls.pdf",
+  "must": [
+   "three"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "What is the notice period for grades G1 to G10?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "60"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "How many days to resolve grievances?",
+  "doc": "HR_Policies_Manual.pdf",
+  "must": [
+   "21"
+  ],
+  "category": "policy"
+ },
+ {
+  "question": "Calculate the percentage increase in revenue between FY2024 and FY2025.",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "18.56"
+  ],
+  "category": "numerical"
+ },
+ {
+  "question": "Calculate the percentage increase in EBITDA between FY2024 and FY2025.",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "25.70"
+  ],
+  "category": "numerical"
+ },
+ {
+  "question": "How much did net profit grow from FY2024 to FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "30.99"
+  ],
+  "category": "numerical"
+ },
+ {
+  "question": "What was the percentage change in operating expenses from FY2024 to FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "16.46"
+  ],
+  "category": "numerical"
+ },
+ {
+  "question": "How did production volume change from Q1 to Q2?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "16.02"
+  ],
+  "category": "numerical"
+ },
+ {
+  "question": "How did production volume change from Q2 to Q3?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "3.56"
+  ],
+  "category": "numerical"
+ },
+ {
+  "question": "What was employee attrition in FY2025 compared with FY2024?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "14.8",
+   "11.2"
+  ],
+  "category": "numerical"
+ },
+ {
+  "question": "How did headcount change between FY2024 and FY2025?",
+  "doc": "Employee_Handbook_FY2025.pdf",
+  "must": [
+   "1925"
+  ],
+  "category": "numerical"
+ },
+ {
+  "question": "What was the EBITDA margin in FY2025?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "24.09"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "What was net margin in FY2024?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "11.36"
+  ],
+  "category": "table_lookup"
+ },
+ {
+  "question": "Which production line had the highest defect rate?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "Line B"
+  ],
+  "category": "superlative"
+ },
+ {
+  "question": "Which production line had the lowest defect rate?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "Line C"
+  ],
+  "category": "superlative"
+ },
+ {
+  "question": "Which line had the most downtime hours in Q2?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "Line B",
+   "118"
+  ],
+  "category": "superlative"
+ },
+ {
+  "question": "Which department has the highest FY2026 budget?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "Manufacturing"
+  ],
+  "category": "superlative"
+ },
+ {
+  "question": "Which department has the lowest FY2026 budget?",
+  "doc": "Budget_and_Forecast_Report_FY2026.pdf",
+  "must": [
+   "Legal & Compliance"
+  ],
+  "category": "superlative"
+ },
+ {
+  "question": "Which product family had the highest revenue growth?",
+  "doc": "Annual_Report_FY2025.pdf",
+  "must": [
+   "Custom Tooling"
+  ],
+  "category": "superlative"
+ },
+ {
+  "question": "Did increased production volume coincide with higher defect rates in Q2?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "16.02",
+   "Yes"
+  ],
+  "category": "multi_document"
+ },
+ {
+  "question": "Did production volume and defect rate both rise between Q1 and Q2?",
+  "doc": "Production_and_Maintenance_Report_FY2025.pdf",
+  "must": [
+   "16.02",
+   "Yes"
+  ],
+  "category": "multi_document"
+ },
+ {
+  "question": "Did defect rates rise when production volume increased from Q1 to Q2?",
+  "doc": "Quality_and_Safety_Manual.pdf",
+  "must": [
+   "3.1",
+   "Yes"
+  ],
+  "category": "multi_document"
+ },
+ {
+  "question": "What was the company's stock price on 3 October 2026?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ },
+ {
+  "question": "Who is the CEO of the company?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ },
+ {
+  "question": "What is the dividend per share declared for FY2025?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ },
+ {
+  "question": "How many electric vehicles does the company sell in Germany?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ },
+ {
+  "question": "What is the market share of the company in Brazil?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ },
+ {
+  "question": "What was revenue in FY2023?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ },
+ {
+  "question": "What is the revenue forecast for FY2027?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ },
+ {
+  "question": "Who won the cricket match yesterday?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ },
+ {
+  "question": "What is the salary of the managing director?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ },
+ {
+  "question": "How many patents does the company hold?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ },
+ {
+  "question": "What is the weather in Pune today?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ },
+ {
+  "question": "What is the company's carbon emission target for 2030?",
+  "doc": "",
+  "must": [],
+  "category": "unanswerable"
+ }
+]

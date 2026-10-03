@@ -1,0 +1,6 @@
+numpy>=1.26
+pypdf>=4.0
+openpyxl>=3.1
+requests>=2.31
+reportlab>=4.0        # only needed to regenerate the synthetic dataset
+# Optional (production-quality embeddings, ~2 GB download): sentence-transformers>=3.0

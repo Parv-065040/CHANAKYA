@@ -1,0 +1,18 @@
+{
+ "Annual_Report_FY2025.pdf": "finance",
+ "Budget_and_Forecast_FY2026.xlsx": "finance",
+ "Budget_and_Forecast_Report_FY2026.pdf": "finance",
+ "Compensation_and_Performance_Manual.pdf": "hr",
+ "Customer_Service_Manual.pdf": "customer_support",
+ "Employee_Handbook_FY2025.pdf": "hr",
+ "Financial_Policies_and_Controls.pdf": "finance",
+ "HR_Policies_Manual.pdf": "hr",
+ "Machine_Downtime_FY2025.xlsx": "manufacturing",
+ "Manufacturing_Operations_Manual.pdf": "manufacturing",
+ "Product_Support_Manual.pdf": "customer_support",
+ "Production_and_Maintenance_Report_FY2025.pdf": "manufacturing",
+ "Quality_and_Safety_Manual.pdf": "manufacturing",
+ "SLA_and_Escalation_Handbook.pdf": "customer_support",
+ "Support_Tickets_FY2025.csv": "customer_support",
+ "Weekly_Production_FY2025.xlsx": "manufacturing"
+}

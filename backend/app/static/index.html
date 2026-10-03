@@ -1,0 +1,76 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CHANAKYA</title>
+<style>
+:root{--bg:#f7f7f5;--fg:#1a1a1a;--card:#fff;--mut:#666;--ac:#1f4e79;--bd:#ddd}
+@media(prefers-color-scheme:dark){:root{--bg:#141414;--fg:#eee;--card:#1e1e1e;--mut:#999;--ac:#6aa9e0;--bd:#333}}
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+header{padding:14px 16px;border-bottom:1px solid var(--bd)}h1{margin:0;font-size:20px;letter-spacing:.08em}
+header p{margin:2px 0 0;color:var(--mut);font-size:13px}
+main{max-width:900px;margin:0 auto;padding:12px 16px 80px}
+nav{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}
+button,select,input{font:inherit}button{background:var(--card);color:var(--fg);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;cursor:pointer}
+button.on,button.go{background:var(--ac);color:#fff;border-color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin:10px 0}
+.chips button{font-size:13px;margin:3px 3px 0 0}
+#log .q{font-weight:600;margin-top:14px}#log .a{white-space:pre-wrap}
+.src{font-size:13px;color:var(--mut)}.badge{font-size:11px;padding:2px 6px;border-radius:6px;border:1px solid var(--bd);margin-left:6px}
+.bar{display:flex;gap:8px;position:fixed;bottom:0;left:0;right:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--bd)}
+.bar input{flex:1;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--fg)}
+table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid var(--bd);padding:6px;text-align:left}
+.wrap{overflow-x:auto}.err{color:#c0392b}.hide{display:none}details{margin-top:6px}pre{white-space:pre-wrap;font-size:12px}
+</style></head><body>
+<header><h1>CHANAKYA</h1><p>Turn Enterprise Knowledge into Intelligent Decisions. Demo uses the synthetic CHANAKYA Demonstration Dataset.</p></header>
+<main>
+<div class="src">Access token (only if the server uses AUTH_MODE=tokens): <input id="tok" type="password" size="18" placeholder="token"> <button id="tokb">Save</button> <span id="hs"></span></div>
+<nav><button id="t-chat" class="on">Ask</button><button id="t-kb">Knowledge base</button><button id="t-up">Upload</button></nav>
+<section id="chat">
+ <div>Department: <select id="dept"><option value="">All (auto-route)</option></select></div>
+ <div class="chips" id="chips"></div><div id="log"></div>
+</section>
+<section id="kb" class="hide"><div class="card wrap"><table id="kbt"></table></div></section>
+<section id="up" class="hide"><div class="card">
+ <p>PDF, XLSX or CSV.</p><select id="udept"></select> <input type="file" id="file" accept=".pdf,.xlsx,.csv"> <button class="go" id="ubtn">Upload &amp; index</button>
+ <div id="ustat" class="src"></div></div></section>
+</main>
+<div class="bar" id="bar"><input id="q" placeholder="Ask a question about your documents" maxlength="1000"><button class="go" id="send">Send</button></div>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let TOKEN=sessionStorage.getItem("chanakya_token")||"";
+const H=(extra={})=>TOKEN?{...extra,Authorization:"Bearer "+TOKEN}:extra;
+const SUG=["What was revenue in FY2025 and how much did it grow from FY2024?","What was employee attrition in FY2025 compared with FY2024?","Which production line had the highest defect rate?","What is the SLA for Priority-1 incidents?","Did increased production volume coincide with higher defect rates in Q2?","Calculate the percentage increase in EBITDA between FY2024 and FY2025.","What was the company's stock price on 3 October 2026?"];
+function tab(n){for(const t of["chat","kb","up"]){$(t).classList.toggle("hide",t!==n);$("t-"+t).classList.toggle("on",t===n)}$("bar").classList.toggle("hide",n!=="chat");if(n==="kb")loadKb()}
+for(const t of["chat","kb","up"])$("t-"+t).onclick=()=>tab(t);
+SUG.forEach(s=>{const b=document.createElement("button");b.textContent=s;b.onclick=()=>{$("q").value=s;ask()};$("chips").appendChild(b)});
+fetch("/departments",{headers:H()}).then(r=>r.json()).then(ds=>ds.forEach(d=>{for(const id of["dept","udept"]){const o=document.createElement("option");o.value=d.name;o.textContent=d.label;$(id).appendChild(o)}}));
+async function ask(retryQ){
+ const q=(retryQ||$("q").value).trim();if(!q)return;$("q").value="";
+ const box=document.createElement("div");box.innerHTML=`<div class="q">${esc(q)}</div><div class="a">Thinking…</div><div class="meta"></div>`;$("log").appendChild(box);
+ const a=box.querySelector(".a"),m=box.querySelector(".meta");window.scrollTo(0,document.body.scrollHeight);
+ try{
+  const r=await fetch("/query/stream",{method:"POST",headers:H({"Content-Type":"application/json"}),body:JSON.stringify({question:q,department:$("dept").value||null})});
+  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.status)}
+  const rd=r.body.getReader(),dec=new TextDecoder();let buf="",txt="";a.textContent="";
+  while(true){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
+   let i;while((i=buf.indexOf("\n\n"))>=0){const ev=buf.slice(0,i);buf=buf.slice(i+2);const t=/event: (\w+)/.exec(ev)[1],d=JSON.parse(/data: (.*)/s.exec(ev)[1]);
+    if(t==="token"){txt+=d;a.textContent=txt}else render(a,m,d)}}
+ }catch(e){a.innerHTML=`<span class="err">Error: ${esc(e.message)}</span> <button>Retry</button>`;a.querySelector("button").onclick=()=>{box.remove();ask(q)}}
+}
+function render(a,m,d){
+ a.textContent=d.answer;let h=`<span class="badge">${esc(d.route.question_type)}</span><span class="badge">${d.mode}</span><span class="badge">${d.grounded?"grounded":"check sources"}</span>`;
+ if(d.notice)h+=`<div class="src">${esc(d.notice)}</div>`;
+ if(d.calculations.length)h+=`<details open><summary>Calculation</summary>${d.calculations.map(c=>`<div class="src">${esc(c)}</div>`).join("")}</details>`;
+ if(d.sources.length)h+=`<details open><summary>Sources</summary>${d.sources.map(s=>`<div class="src">[${s.source_id}] ${esc(s.document)} — page ${esc(s.page)}${s.section?" — "+esc(s.section):""}</div>`).join("")}</details>`;
+ if(d.evidence.length)h+=`<details><summary>Evidence</summary>${d.evidence.map(e=>`<div class="card"><b>[${e.source_id}] ${esc(e.document)} p.${e.page}</b> <span class="src">${e.type}, score ${e.score}</span><pre>${esc(e.text)}</pre></div>`).join("")}</details>`;
+ m.innerHTML=h}
+$("tokb").onclick=()=>{TOKEN=$("tok").value.trim();sessionStorage.setItem("chanakya_token",TOKEN);location.reload()};
+fetch("/health").then(r=>r.json()).then(h=>{$("hs").textContent=h.status==="seeding"?"Indexing demo documents, please wait…":`${h.documents} documents, ${h.chunks} chunks, ${h.llm} mode`;if(h.status==="seeding")setTimeout(()=>location.reload(),8000)});
+$("send").onclick=()=>ask();$("q").onkeydown=e=>{if(e.key==="Enter")ask()};
+async function loadKb(){const rs=await fetch("/documents",{headers:H()});if(!rs.ok){$("kbt").innerHTML="<tr><td class=err>"+esc((await rs.json()).error.message)+"</td></tr>";return}const ds=await rs.json();
+ $("kbt").innerHTML="<tr><th>Document</th><th>Dept</th><th>Ver</th><th>Status</th><th>Chunks</th><th>Uploaded</th><th></th></tr>"+ds.map(d=>`<tr><td>${esc(d.name)}</td><td>${esc(d.department)}</td><td>${d.version}</td><td>${d.status}</td><td>${d.n_chunks} (${d.n_tables} tables)</td><td>${new Date(d.uploaded_at*1000).toLocaleDateString()}</td><td>${d.status==="indexed"?`<button data-id="${d.document_id}">Delete</button>`:""}</td></tr>`).join("");
+ $("kbt").querySelectorAll("button").forEach(b=>b.onclick=async()=>{await fetch("/documents/"+b.dataset.id,{method:"DELETE",headers:H()});loadKb()})}
+$("ubtn").onclick=async()=>{const f=$("file").files[0];if(!f){$("ustat").textContent="Choose a file first.";return}
+ $("ustat").textContent=`Uploading ${f.name} (${(f.size/1024).toFixed(1)} KB), parsing and indexing…`;
+ try{const r=await fetch(`/documents/upload?filename=${encodeURIComponent(f.name)}&department=${$("udept").value}`,{method:"POST",headers:H(),body:f});const j=await r.json();
+  $("ustat").innerHTML=r.ok?`Indexed: ${esc(j.name)} v${j.version}, ${j.n_chunks} chunks, ${j.n_tables} tables.`:`<span class="err">${esc(j.error.message)}</span>`}catch(e){$("ustat").innerHTML=`<span class="err">${esc(e.message)}</span>`}};
+</script></body></html>
