@@ -1,0 +1,8 @@
+﻿streamlit==1.65.0
+python-dotenv>=1.0.1
+numpy>=1.26
+pypdf>=4.0
+openpyxl>=3.1
+requests>=2.31
+reportlab>=4.0
+sentence-transformers==6.1.0

@@ -99,7 +99,7 @@ class App:
         self.seeding = False
         self.kb = KnowledgeBase(self.settings, embedder, set(DEFAULT_DEPARTMENTS), make_persistence(self.settings, embedder))
         self.llm = GroqClient(self.settings)
-        self.orch = Orchestrator(self.kb, HybridRetriever(self.kb, self.settings.min_relevance, self.settings.min_coverage), self.llm)
+        self.orch = Orchestrator(self.kb, HybridRetriever(self.kb, self.settings.min_relevance, self.settings.min_coverage, settings=self.settings), self.llm)
         self.limiter = RateLimiter(self.settings.rate_limit_per_minute)
 
 

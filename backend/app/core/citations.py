@@ -80,6 +80,10 @@ def validate_answer(
         allowed |= _variants(format(v.normalize(), "f"))
     allowed |= numbers_in(question)
 
+    # Standard mathematical constants used by verified calculations.
+    # These are not business claims; they are calculation constants.
+    allowed |= {"0", "1", "100"}
+
     for sentence in filter(None, (s.strip() for s in _SENT_RE.split(answer))):
         nums = numbers_in(sentence)
         if not nums:

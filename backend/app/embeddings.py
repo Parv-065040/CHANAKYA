@@ -48,7 +48,7 @@ class SentenceTransformerEmbedder:
         from sentence_transformers import SentenceTransformer  # type: ignore
 
         self._m = SentenceTransformer(model)
-        self.dimension = int(self._m.get_sentence_embedding_dimension() or dimension)
+        self.dimension = int(self._m.get_embedding_dimension() or dimension)
 
     def embed(self, texts: list[str]) -> np.ndarray:
         return np.asarray(self._m.encode(texts, normalize_embeddings=True, batch_size=16), dtype=np.float32)

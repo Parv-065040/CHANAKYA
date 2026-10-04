@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import time
 
+import re
 import requests
 
 from .config import Settings
@@ -13,9 +14,13 @@ log = logging.getLogger("chanakya.llm")
 SYSTEM_PROMPT = """You are CHANAKYA, an enterprise knowledge assistant.
 Rules:
 - Answer ONLY from the numbered evidence supplied. Never use outside knowledge.
-- Cite every material claim with its evidence number in square brackets, e.g. [1] or [1][2].
-- Never invent sources, numbers or citations. Only cite numbers that exist in the evidence list.
-- Use the 'Verified calculations' block for any arithmetic; do not compute yourself. Mark them as calculations.
+- Cite every factual or numerical claim using ONLY ASCII square-bracket citations such as [1] or [1][2].
+- NEVER use Unicode citation brackets such as ?1?, ?1??2?, parentheses, footnotes, Markdown links, or any other citation format.
+- Put the citation immediately after the claim it supports. Do not place a citation only at the end of a paragraph containing multiple claims.
+- Never invent sources, numbers or citations. Only cite numbers that exist in the evidence list or verified calculations.
+- Use the 'Verified calculations' block for arithmetic; do not compute arithmetic yourself.
+- When the question asks for a total, aggregate, combined value, annual total, or sum, use the verified calculation that directly answers the question as the primary answer. Do not merely list the component values.
+- Every numerical result from a verified calculation must have an evidence citation supporting its underlying source values.
 - Distinguish source facts from calculations. State uncertainty explicitly.
 - If the evidence does not contain the answer, reply exactly: I could not find sufficient evidence for this question in the available CHANAKYA knowledge base.
 - Be concise for business readers: short answer first, then the calculation if any."""
@@ -53,7 +58,12 @@ class GroqClient:
             if r.status_code != 200:
                 raise LLMUnavailable(f"Groq error {r.status_code}")
             try:
-                return r.json()["choices"][0]["message"]["content"].strip()
+                content = r.json()["choices"][0]["message"]["content"].strip()
+
+                # Normalize model citation markers to CHANAKYA's canonical [n] format.
+                content = content.replace(chr(0x3010), "[").replace(chr(0x3011), "]")
+
+                return content
             except (KeyError, IndexError, ValueError) as exc:
                 raise LLMUnavailable("malformed Groq response") from exc
         raise LLMUnavailable("Groq unavailable")

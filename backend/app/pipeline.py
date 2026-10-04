@@ -112,6 +112,62 @@ class Orchestrator:
             unit = "%" if "(%)" in col else ""
             return [], [], f"{label} had the {kind} {col.replace(' (%)', '')} at {val}{unit} [{sid}]."
         multi = qtype in ("multi_document", "cross_department")
+
+        # Targeted SLA priority lookup.
+        # SLA tables use priority-specific columns such as
+        # "P1 First Response", "P2 First Response", etc.,
+        # rather than normal period columns.
+        priority_match = re.search(r"\b(P[1-4])\b", q, re.I)
+        if priority_match:
+            priority = priority_match.group(1).upper()
+            q_lower = q.lower()
+
+            wants_first_response = (
+                "first response" in q_lower
+                or "response time" in q_lower
+            )
+            wants_resolution = (
+                "resolution target" in q_lower
+                or "resolution time" in q_lower
+            )
+
+            if wants_first_response or wants_resolution:
+                target_words = (
+                    ("first", "response")
+                    if wants_first_response
+                    else ("resolution",)
+                )
+
+                for tv in tables:
+                    matched_col = None
+
+                    for ci, header in enumerate(tv.header[1:], start=1):
+                        h = header.lower()
+                        if priority.lower() in h and all(
+                            word in h for word in target_words
+                        ):
+                            matched_col = ci
+                            break
+
+                    if matched_col is not None:
+                        values = []
+                        for row in tv.rows:
+                            if matched_col < len(row):
+                                values.append(
+                                    f"{row[0]}: {row[matched_col]}"
+                                )
+
+                        if values:
+                            return (
+                                [],
+                                [],
+                                f"{priority} "
+                                f"{'first response' if wants_first_response else 'resolution target'} "
+                                f"- "
+                                + "; ".join(values)
+                                + f" [{tv.source_id}]."
+                            )
+
         rows = T.lookup_text_row(q, tables)
         if rows:
             tv, row = rows[0]
@@ -127,15 +183,118 @@ class Orchestrator:
         by_metric: dict[tuple[int, str], list[T.Fact]] = {}
         for f in facts:
             by_metric.setdefault((f.source_id, f.metric), []).append(f)
-        want_calc = bool(T.GROWTH.search(q)) or multi
+
+        is_comparison = qtype == "comparison"
+
+        # Handle explicit comparisons deterministically.
+        # Prefer facts from the period explicitly named in the question.
+        if is_comparison:
+            comparison_facts = facts
+
+            requested_periods = [
+                f.period for f in facts
+                if re.search(r"\b(?:FY|Q)[0-9]{2,4}\b", f.period, re.I)
+                and re.search(re.escape(f.period), q, re.I)
+            ]
+
+            if requested_periods:
+                requested_period = requested_periods[0]
+                filtered = [
+                    f for f in facts
+                    if f.period.lower() == requested_period.lower()
+                ]
+                if len(filtered) >= 2:
+                    comparison_facts = filtered
+
+            # Keep one value per metric for the requested period.
+            comparison_values: list[tuple[str, float, str, int]] = []
+            seen_metrics: set[str] = set()
+
+            for f in comparison_facts:
+                metric = f.metric.replace(" (%)", "").replace(" (units)", "")
+                if metric in seen_metrics:
+                    continue
+                try:
+                    value = nx.parse_quantity(f.raw, f.source_id).value
+                except nx.NumericError:
+                    continue
+                seen_metrics.add(metric)
+                comparison_values.append(
+                    (metric, float(value), f.raw, f.source_id)
+                )
+
+            if len(comparison_values) >= 2:
+                left = comparison_values[0]
+                right = comparison_values[1]
+
+                if left[1] > right[1]:
+                    relation = "higher than"
+                elif left[1] < right[1]:
+                    relation = "lower than"
+                else:
+                    relation = "equal to"
+
+                comparison_sentence = (
+                    f"{left[0]} was {left[2]} and {right[0]} was {right[2]}; "
+                    f"{left[0]} was {relation} {right[0]} [{left[3]}]."
+                )
+
+                return [], [comparison_sentence], comparison_sentence
+
+        want_calc = (
+            bool(T.GROWTH.search(q))
+            or bool(re.search(
+                r"\b(total|overall|aggregate|combined|sum|annual total|yearly total)\b",
+                q,
+                re.I,
+            ))
+        )
+
         calcs: list[Calc] = []
         sentences: list[str] = []
         directions: list[tuple[str, int]] = []
+
         for (sid, metric), fs in by_metric.items():
+
+            if (
+                bool(re.search(
+                    r"\b(total|overall|aggregate|combined|sum|annual total|yearly total)\b",
+                    q,
+                    re.I,
+                ))
+                and len(fs) >= 2
+                and all(T.is_period(f.period) for f in fs)
+            ):
+                try:
+                    quantities = [nx.parse_quantity(f.raw, sid) for f in fs]
+                    total_value = sum(q.value for q in quantities)
+                    total = nx.parse_quantity(str(total_value), sid)
+
+                    clean = metric.replace(" (%)", "").replace(" (units)", "")
+                    components = " + ".join(f.raw for f in fs)
+
+                    calcs.append(
+                        Calc(
+                            f"{clean} total",
+                            total,
+                            f"{clean} total: {components} = {nx.quantize(total.value, 2)}"
+                        )
+                    )
+
+                    sentences.append(
+                        f"{clean} total was {nx.quantize(total.value, 2)} [{sid}]."
+                    )
+                except nx.NumericError:
+                    pass
+
             clean = metric.replace(" (%)", "").replace(" (units)", "")
             suffix = "%" if "(%)" in metric else ""
-            vals = f"{clean} was " + " and ".join(f"{f.raw}{suffix} in {re.sub(r' *[(].*?[)]', '', f.period)}" for f in fs)
+            vals = f"{clean} was " + " and ".join(
+                f"{f.raw}{suffix} in {re.sub(r' *[(].*?[)]', '', f.period)}"
+                for f in fs
+            )
             sentences.append(f"{vals} [{sid}].")
+
             if want_calc and len(fs) >= 2:
                 old, new = fs[0], fs[-1]
                 try:
@@ -144,19 +303,49 @@ class Orchestrator:
                     pts = nx.difference(nq, oq)
                 except nx.NumericError:
                     continue
+
                 unit_pct = "(%)" in metric
-                calcs.append(Calc(f"{clean} {old.period}->{new.period}", pc,
-                                  f"{clean}: {pc.formula} = {pc.display()} ({old.period} to {new.period})"))
-                calcs.append(Calc(f"{clean} points", pts, f"{clean}: difference = {pts.formula} = {nx.quantize(pts.value, 2)}"))
-                sentences.append(f"{clean} changed by {nx.quantize(pc.value)}% from {old.period} to {new.period}"
-                                 + (f" ({nx.quantize(pts.value, 1)} percentage points)" if unit_pct else "") + f" [{sid}].")
-                directions.append((clean, 1 if pc.value > 0 else -1 if pc.value < 0 else 0))
+                calcs.append(
+                    Calc(
+                        f"{clean} {old.period}->{new.period}",
+                        pc,
+                        f"{clean}: {pc.formula} = {pc.display()} ({old.period} to {new.period})"
+                    )
+                )
+                calcs.append(
+                    Calc(
+                        f"{clean} points",
+                        pts,
+                        f"{clean}: difference = {pts.formula} = {nx.quantize(pts.value, 2)}"
+                    )
+                )
+                sentences.append(
+                    f"{clean} changed by {nx.quantize(pc.value)}% from "
+                    f"{old.period} to {new.period}"
+                    + (
+                        f" ({nx.quantize(pts.value, 1)} percentage points)"
+                        if unit_pct else ""
+                    )
+                    + f" [{sid}]."
+                )
+                directions.append(
+                    (clean, 1 if pc.value > 0 else -1 if pc.value < 0 else 0)
+                )
+
         if multi and len(directions) >= 2:
-            same = len({d for _, d in directions if d != 0}) == 1 and all(d != 0 for _, d in directions)
+            same = (
+                len({d for _, d in directions if d != 0}) == 1
+                and all(d != 0 for _, d in directions)
+            )
             names = " and ".join(n for n, _ in directions[:2])
-            sentences.append(("Yes - " + names + " moved in the same direction over the period, which is consistent with a coincidence"
-                              " (this does not by itself establish causation).") if same else
-                             f"No - {names} did not move in the same direction over the period.")
+            sentences.append(
+                ("Yes - " + names +
+                 " moved in the same direction over the period, which is consistent "
+                 "with a coincidence (this does not by itself establish causation).")
+                if same
+                else f"No - {names} did not move in the same direction over the period."
+            )
+
         return calcs, [s for s in sentences], " ".join(sentences)
 
     @staticmethod
