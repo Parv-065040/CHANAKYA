@@ -4,6 +4,10 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from dotenv import load_dotenv
+from pathlib import Path
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 
 def _f(name: str, default: str) -> str:
@@ -26,6 +30,7 @@ class Settings:
     rate_limit_per_minute: int = field(default_factory=lambda: int(_f("RATE_LIMIT_PER_MINUTE", "30")))
     max_upload_mb: int = field(default_factory=lambda: int(_f("MAX_UPLOAD_MB", "25")))
     storage_backend: str = field(default_factory=lambda: _f("STORAGE_BACKEND", "local"))
+    retrieval_backend: str = field(default_factory=lambda: _f("RETRIEVAL_BACKEND", "local"))
     supabase_url: str = field(default_factory=lambda: _f("SUPABASE_URL", ""))
     supabase_service_key: str = field(default_factory=lambda: _f("SUPABASE_SERVICE_ROLE_KEY", ""))
     supabase_bucket: str = field(default_factory=lambda: _f("SUPABASE_BUCKET", "chanakya-docs"))

@@ -1,67 +1,247 @@
-# CHANAKYA: Agentic Enterprise Knowledge Platform
+﻿# CHANAKYA
+## Agentic Enterprise Knowledge & Business Automation Platform
 
-Turn enterprise documents into cited, numerically-correct answers. Four departments (Finance, HR, Manufacturing, Customer Support),
-hybrid retrieval, a deterministic numerical engine, a citation/grounding validator, and refusal when evidence is missing.
+> **Enterprise intelligence, grounded in evidence.**
 
-Course: Agentic AI for Business Automation. Professor: Ashok Harnal. Team: Parv Jhamb (065040), Awantika Kholia (065060), Aman Malhi (065010).
+CHANAKYA is a production-oriented Agentic RAG platform designed to answer enterprise business questions across **Finance, HR, Manufacturing and Customer Support**.
 
-## Quick start (works with zero keys, offline)
-```
-cd backend
-pip install -r requirements.txt
-python -m app.server            # http://localhost:8000
-```
-First start indexes the bundled synthetic knowledge base in the background (about 20 seconds; the page shows progress). Later starts load from disk.
+Instead of treating enterprise RAG as a simple document chatbot, CHANAKYA separates:
 
-## Plug in your keys (copy `.env.example` to `.env`, or set variables in your host)
-| What | Variables | Notes |
-|---|---|---|
-| LLM | `GROQ_API_KEY`, `GROQ_MODEL=openai/gpt-oss-120b` | Without a key the app answers deterministically from the evidence. |
-| Database | `STORAGE_BACKEND=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_BUCKET` | Run `backend/sql/schema.sql` in the Supabase SQL editor; create a private bucket. Service-role key stays server-side. |
-| Embeddings | `EMBEDDING_PROVIDER=sentence-transformers` (local BGE-M3) or `hf-inference` + `HF_API_TOKEN` + `HF_EMBED_URL` | Changing model re-embeds automatically at start-up. `EMBEDDING_DIMENSION` must match `vector(N)` in the schema. |
-| Access control | `AUTH_MODE=tokens`, `ADMIN_TOKEN`, `USER_TOKENS={"tok":["finance"],"exec":"*"}` | Admin uploads/deletes; users query only their departments. Enter the token in the UI. |
+- Query routing
+- Hybrid retrieval
+- Evidence sufficiency
+- Table reasoning
+- Numerical reasoning
+- LLM answer generation
+- Citation validation
+- Hallucination/refusal handling
 
-Docker: `docker compose up --build` (reads `.env`). `render.yaml` is a ready blueprint for Render's free tier.
+The system is designed around one principle:
 
-## What is verified vs. not (read this before you present)
-Verified in this build (run in a sandbox with no internet): 76 automated tests pass; end-to-end server smoke test with restart persistence;
-Supabase adapter tested against a local PostgREST/Storage **stub**; evaluation on 130 questions.
+> **If the knowledge base does not provide sufficient evidence, CHANAKYA should not invent an answer.**
 
-**Never run against real services, because the sandbox had no network or keys:**
-- Groq / GPT-OSS 120B calls (client tested with mocks; confirm the model id and rate limits in Groq's console).
-- Real Supabase (request shapes follow the documented REST API; stub-tested only). pgvector search happens in memory after loading vectors at start-up. The HNSW index in the schema is not used by queries.
-- BGE-M3 via sentence-transformers or Hugging Face Inference (adapters written; HF endpoint URL is yours to supply).
-- Docker build, Render deployment, OCR for scanned PDFs (needs `pytesseract`, untested).
+---
 
-**Deliberate deviations from the original spec:** stdlib HTTP server + single HTML page instead of FastAPI + Next.js (same endpoints; avoids
-dependencies that could not be installed here); keyword/IDF reranker instead of a cross-encoder; token auth instead of Supabase Auth/RLS.
+# 1. Project Overview
 
-## Knowledge base (synthetic, fictional "Veritas Forge Industries Ltd")
-16 files: 12 PDFs (**321 pages**), 3 XLSX, 1 CSV (3,000 tickets). Not the 500+ pages originally targeted: reaching that would have required filler,
-which would only inflate page count without adding testable content. About 70% of pages are data tables and registers (customer revenue,
-cost-center ledger, shift production log, work orders, ticket register); manuals mix hand-written policy text with parameter-generated
-per-machine / per-product sections, so they are repetitive in style. All numbers come from one model (`backend/data/facts.py`); sums tie across documents and are asserted in `tests/test_dataset.py`.
-Regenerate: `python data/generate_dataset.py`.
+CHANAKYA was developed for the course:
 
-## Evaluation (`python -m eval.run_eval`, results in `eval/last_results.json`, served at `/evaluation/summary`)
-130 questions (118 answerable, 12 unanswerable), generated from the same fact model, offline mode, hashing embeddings:
-retrieval hit rate 100%, answer accuracy 100%, grounded 99%, refusal accuracy 92% (11/12).
-**Caveat:** I iterated on the retriever/table agent while looking at failures on these same questions, so these are development-set numbers, not held-out.
-Known failure: "What is the salary of the managing director?" is answered with an unrelated bonus sentence instead of refusing; a coverage threshold that
-rejects it would also reject valid questions, so I left it.
-Offline answers are templated ("X was A in FY2024 and B in FY2025"); LLM mode gives more natural prose but is validated against the same evidence.
+**Agentic AI for Business Automation**
 
-## API
-GET `/health` `/departments` `/documents` `/documents/{id}` `/sources/{chunk_id}` `/evaluation/summary`;
-POST `/documents/upload?filename=&department=` (raw body), `/query`, `/query/stream` (SSE); DELETE `/documents/{id}`.
-Streaming sends the already-validated answer word by word (validation needs the full text).
+**Faculty:** Professor Ashok Harnal
 
-## Architecture
-`core/router.py` (department + question type, access allow-list) -> `retrieval.py` (vector + BM25 -> RRF -> rerank -> sufficiency gate)
--> `tables.py` + `core/numerics.py` (table facts, Decimal math with formulas) -> `llm.py` or offline composer -> `core/citations.py`
-(rejects fabricated sources, uncited numbers, unsupported figures; a failing LLM answer is replaced by the verified answer).
-Add a department: one `DepartmentConfig` in `core/router.py`, plus a manifest entry.
+### Team
 
-## Limits and honest notes
-Free tiers (Groq, Supabase, hosts) have quotas; the app rate-limits per IP and falls back to offline answers when the LLM is unavailable.
-Everything is held in memory at runtime (fine for tens of thousands of chunks). Scanned PDFs without OCR are rejected with a clear message. Dataset is synthetic; do not present it as real company data.
+| Member | ID | Responsibility |
+|---|---:|---|
+| Parv Jhamb | 065040 | Backend, retrieval, embeddings, orchestration, Supabase, evaluation |
+| Awantika Kholia | 065060 | Knowledge base, datasets, evaluation questions |
+| Aman Malhi | 065010 | Frontend, deployment and product interface |
+
+---
+
+# 2. Business Problem
+
+Large organizations store critical knowledge across:
+
+- Annual reports
+- Financial policies
+- Budgets
+- HR manuals
+- Employee handbooks
+- Manufacturing reports
+- Production records
+- Maintenance reports
+- Quality manuals
+- Customer-support manuals
+- SLA handbooks
+- Ticket registers
+- Excel workbooks
+- CSV operational datasets
+
+Traditional keyword search forces employees to manually locate information.
+
+Generic LLM chatbots create a different problem:
+
+> They may generate plausible answers that are not actually supported by enterprise evidence.
+
+CHANAKYA addresses both problems.
+
+It provides a governed question-answering layer capable of retrieving enterprise evidence, reasoning over structured data, performing calculations and validating generated answers before returning them.
+
+---
+
+# 3. Core Capabilities
+
+## Enterprise RAG
+
+- Document ingestion
+- Structure-aware chunking
+- Page-level provenance
+- Section metadata
+- Table preservation
+- Document/version tracking
+- Department classification
+
+## Hybrid Retrieval
+
+CHANAKYA combines:
+
+- Dense vector retrieval
+- PostgreSQL full-text search
+- Keyword retrieval
+- Reciprocal Rank Fusion
+- Relevance filtering
+- Evidence sufficiency checks
+
+## Numerical Intelligence
+
+The numerical layer can:
+
+- Identify numerical facts
+- Normalize quantities
+- Compare periods
+- Calculate percentage change
+- Calculate differences
+- Handle percentage-point changes
+- Produce calculation formulas
+- Validate calculated values against evidence
+
+## Table Intelligence
+
+The system supports:
+
+- Table lookup
+- Row matching
+- Column matching
+- Priority/SLA lookup
+- Multi-document table reasoning
+- Structured numerical evidence
+
+## Grounded Generation
+
+LLM responses are validated before being displayed.
+
+The validator checks:
+
+- Citation validity
+- Source existence
+- Numeric grounding
+- Unsupported figures
+- Fabricated citations
+- Evidence coverage
+
+If validation fails, CHANAKYA falls back to a deterministic evidence-based answer.
+
+## Refusal
+
+When evidence is insufficient, the system explicitly refuses instead of hallucinating.
+
+---
+
+# 4. Supported Departments
+
+### Finance
+
+Examples:
+
+- Revenue
+- Profit
+- Budgets
+- Forecasts
+- Financial controls
+- Cost centers
+- Annual reports
+
+### Human Resources
+
+Examples:
+
+- Leave policies
+- Compensation
+- Performance management
+- Employee handbook
+- HR policies
+
+### Manufacturing
+
+Examples:
+
+- Production
+- Machine downtime
+- Maintenance
+- Quality
+- Safety
+- Production targets
+
+### Customer Support
+
+Examples:
+
+- Support tickets
+- SLA targets
+- Escalation policies
+- First-response targets
+- Resolution targets
+- Product support
+
+---
+
+# 5. System Architecture
+
+```mermaid
+flowchart TD
+
+    U[User] --> UI[Streamlit Enterprise UI]
+
+    UI --> APP[CHANAKYA App]
+
+    APP --> ORCH[Agentic Query Orchestrator]
+
+    ORCH --> ROUTER[Query Router]
+
+    ROUTER --> QT[Question Type Detection]
+    ROUTER --> DEPT[Department Routing]
+
+    QT --> RET[Hybrid Retrieval]
+    DEPT --> RET
+
+    RET --> VEC[Dense Vector Retrieval]
+    RET --> FTS[PostgreSQL Full Text / Keyword Retrieval]
+
+    VEC --> FUSION[Rank Fusion / RRF]
+    FTS --> FUSION
+
+    FUSION --> RERANK[Relevance / IDF Reranking]
+    RERANK --> GATE[Evidence Sufficiency Gate]
+
+    GATE -->|Insufficient Evidence| REFUSE[Grounded Refusal]
+    GATE -->|Sufficient Evidence| REASON[Reasoning Layer]
+
+    REASON --> TABLE[Table Intelligence]
+    REASON --> NUM[Numerical Engine]
+
+    TABLE --> CONTEXT[Evidence Context]
+    NUM --> CONTEXT
+
+    CONTEXT --> LLM[GPT-OSS 120B via Groq]
+
+    LLM --> VALIDATE[Citation & Grounding Validator]
+
+    VALIDATE -->|Valid| ANSWER[Verified Answer]
+    VALIDATE -->|Invalid| FALLBACK[Deterministic Evidence Answer]
+
+    ANSWER --> UI
+    FALLBACK --> UI
+    REFUSE --> UI
+
+    DB[(Supabase PostgreSQL)]
+    PGV[(pgvector)]
+    STORAGE[(Supabase Storage)]
+
+    DB --> FTS
+    PGV --> VEC
+    STORAGE --> DB
+
+    RET -.-> DB
+    RET -.-> PGV

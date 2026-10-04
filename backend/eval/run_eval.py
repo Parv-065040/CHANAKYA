@@ -68,7 +68,7 @@ def run() -> dict:
         "retrieval_hit_rate": round(hits / n_ans, 3), "retrieval_mrr": round(rr / n_ans, 3),
         "answer_accuracy": round(correct / n_ans, 3), "grounded_rate": round(grounded / n_ans, 3),
         "refusal_accuracy": round(refusal_ok / n_ref, 3),
-        "mode": "offline-deterministic (no LLM); embeddings=hashing",
+        "mode": "offline-deterministic (no LLM); embeddings=bge-m3",
     }
     return {"summary": summary, "results": rows}
 

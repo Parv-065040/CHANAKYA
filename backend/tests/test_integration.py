@@ -37,7 +37,15 @@ class ParserTests(unittest.TestCase):
 class ApiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = App(Settings(data_dir=Path(tempfile.mkdtemp()), groq_api_key="", rate_limit_per_minute=1000))
+        cls.app = App(
+            Settings(
+                data_dir=Path(tempfile.mkdtemp()),
+                groq_api_key="",
+                rate_limit_per_minute=1000,
+                storage_backend="local",
+                retrieval_backend="local",
+            )
+        )
         seed_dataset(cls.app)
         cls.srv = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(cls.app))
         cls.base = f"http://127.0.0.1:{cls.srv.server_address[1]}"
