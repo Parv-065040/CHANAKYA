@@ -168,6 +168,41 @@ def make_handler(app: App) -> type[BaseHTTPRequestHandler]:
                         return
                     d = app.kb.docs.get(m.group(1))
                     return self._json(200, asdict(d)) if d else self._err(404, "not_found", "document not found")
+                m = re.fullmatch(r"/documents/([a-f0-9]+)/file", u.path)
+                if m:
+                    ident = self._who()
+                    if not ident:
+                        return
+                    doc = app.kb.docs.get(m.group(1))
+                    if not doc:
+                        return self._err(404, "not_found", "document not found")
+                    if ident[1] is not None and doc.department not in ident[1]:
+                        return self._err(403, "forbidden", "no access to department")
+                    if app.settings.storage_backend != "local":
+                        return self._err(501, "not_supported", "document preview is currently available for local storage only")
+                    root = Path(app.settings.data_dir).resolve() / "files"
+                    matches = list(root.glob(f"{doc.document_id}_{doc.name}"))
+                    if not matches:
+                        return self._err(404, "not_found", "document file not found")
+                    path = matches[0].resolve()
+                    if root not in path.parents:
+                        return self._err(400, "invalid_path", "invalid document path")
+                    ctype = {
+                        ".pdf": "application/pdf",
+                        ".csv": "text/csv; charset=utf-8",
+                        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    }.get(path.suffix.lower(), "application/octet-stream")
+                    data = path.read_bytes()
+                    self.send_response(200)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Content-Length", str(len(data)))
+                    self.send_header("Content-Disposition", f'inline; filename="{doc.name}"')
+                    self.send_header("Access-Control-Allow-Origin", app.settings.cors_origin)
+                    self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+                    self.send_header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
                 m = re.fullmatch(r"/sources/([a-f0-9]+)", u.path)
                 if m:
                     ident = self._who()
