@@ -1,7 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
-
 :root {
-  font-family: "DM Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Aptos", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   color: #111318;
   background: #f7f8fa;
   font-synthesis: none;
@@ -78,7 +76,7 @@ button:focus-visible, textarea:focus-visible, select:focus-visible {
 
 .hero-orb-wrap { display: grid; place-items: center; position: relative; min-height: 250px; }
 .orb-caption { position: absolute; bottom: 0; right: 22%; display: flex; flex-direction: column; align-items: flex-start; }
-.orb-caption span { font: 500 10px "IBM Plex Mono", monospace; letter-spacing: .16em; color: var(--navy); }
+.orb-caption span { font: 500 10px "Cascadia Mono", "SFMono-Regular", Consolas, monospace; letter-spacing: .16em; color: var(--navy); }
 .orb-caption small { color: var(--subtle); font-size: 10px; margin-top: 3px; }
 
 .chanakya-orb { width: 250px; height: 220px; position: relative; perspective: 700px; display: grid; place-items: center; cursor: default; }
@@ -175,7 +173,7 @@ button:focus-visible, textarea:focus-visible, select:focus-visible {
 .answer-status .grounded { color: #3e7952; font-weight: 600; }
 .answer-status .warning { color: var(--saffron-dark); }
 .calculation-strip { margin-top: 13px; padding: 11px 12px; border-left: 2px solid var(--saffron); background: #fffaf4; color: #5a4935; font-size: 12px; line-height: 1.55; }
-.mini-label { color: var(--saffron-dark); font: 500 9px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 5px; }
+.mini-label { color: var(--saffron-dark); font: 500 9px "Cascadia Mono", "SFMono-Regular", Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 5px; }
 .sources-block { margin-top: 16px; }
 .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .section-heading span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #5f6670; }
@@ -293,3 +291,15 @@ button:focus-visible, textarea:focus-visible, select:focus-visible {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .2ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .magic-card:hover .magic-card__spotlight { opacity: 0; }
 }
+
+.source-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+.document-link {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 8px 11px;
+  border-radius: 10px; border: 1px solid #d8c09b; background: #fff7ea; color: #85500d;
+  text-decoration: none; font-size: 11px; font-weight: 700; cursor: pointer;
+  transition: transform 150ms var(--ease-out), background 150ms ease, border-color 150ms ease;
+}
+.document-link:hover { transform: translateY(-1px); background: #fff1d8; border-color: #caa46c; }
+.document-link:active { transform: scale(.97); }
+.document-link--secondary { border-color: var(--line); background: white; color: var(--muted); }
+.document-link--secondary:hover { background: var(--fog); border-color: var(--line-strong); }
