@@ -116,6 +116,21 @@ class HybridRetriever:
                 return sum(terms[t] for t in have) / total
 
             best_single = max(cov([it]) for it in kept)
+
+            # For compact 3-term table lookups, require one evidence chunk
+            # to contain all meaningful query terms. This prevents unrelated
+            # chunks from jointly satisfying an entity/attribute lookup.
+            if plan.question_type == "table_lookup" and len(terms) == 3:
+                term_set = set(terms)
+                has_complete_chunk = any(
+                    term_set.issubset(
+                        set(tokenize(normalize_aliases(it.chunk.embedding_text)))
+                    )
+                    for it in kept
+                )
+                if not has_complete_chunk:
+                    return []
+
             if (cov(kept) if plan.needs_multi_retrieval else best_single) < self.min_coverage:
                 return []
         return kept
@@ -128,3 +143,4 @@ def _diversify(items: list[Retrieved], top_k: int) -> list[Retrieved]:
         (rest if it.chunk.document_id in seen else first).append(it)
         seen.add(it.chunk.document_id)
     return (first + rest)[:top_k]
+
