@@ -51,6 +51,7 @@ function App() {
   const [health, setHealth] = useState(null);
   const [source, setSource] = useState(null);
   const [sourceLoading, setSourceLoading] = useState(false);
+  const [documentUrl, setDocumentUrl] = useState("");
   const [error, setError] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
   const inputRef = useRef(null);
@@ -189,8 +190,11 @@ function App() {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message || "Source unavailable");
       setSource(payload);
+      const page = payload.page_start || 1;
+      setDocumentUrl(payload.document_id ? `${API}/documents/${payload.document_id}/file#page=${page}` : "");
     } catch (err) {
       setSource({ error: err.message });
+      setDocumentUrl("");
     } finally {
       setSourceLoading(false);
     }
@@ -370,7 +374,7 @@ function App() {
       </main>
 
       {source && (
-        <SourceDrawer source={source} loading={sourceLoading} onClose={() => setSource(null)} />
+        <SourceDrawer source={source} loading={sourceLoading} onClose={() => { setSource(null); setDocumentUrl(""); }} />
       )}
     </div>
   );
@@ -429,6 +433,7 @@ function Message({ message, onSource }) {
                           className="source-chip"
                           onClick={() => onSource(item)}
                           disabled={!item.chunk_id}
+                          title={item.chunk_id ? "Open exact retrieved context" : "Source metadata unavailable"}
                         >
                           <FileText size={15} weight="duotone" />
                           <span className="source-chip__text">
@@ -492,6 +497,19 @@ function SourceDrawer({ source, loading, onClose }) {
               <div><span>Page</span><strong>{source.page_start === source.page_end ? source.page_start : `${source.page_start}–${source.page_end}`}</strong></div>
               <div><span>Section</span><strong>{source.section || "N/A"}</strong></div>
               <div><span>Type</span><strong>{source.content_type}</strong></div>
+            </div>
+            {documentUrl && source.content_type === "text" ? null : null}
+            <div className="source-actions">
+              {documentUrl && source.document?.toLowerCase().endsWith(".pdf") && (
+                <a className="document-link" href={documentUrl} target="_blank" rel="noreferrer">
+                  <BookOpenText size={16} />
+                  Open document at page {source.page_start}
+                </a>
+              )}
+              <button className="document-link document-link--secondary" onClick={onClose}>
+                <X size={15} />
+                Close source
+              </button>
             </div>
             <div className="source-highlight">
               <div className="mini-label">Exact retrieved context</div>
