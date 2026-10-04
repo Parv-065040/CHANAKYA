@@ -498,7 +498,6 @@ function SourceDrawer({ source, loading, onClose }) {
               <div><span>Section</span><strong>{source.section || "N/A"}</strong></div>
               <div><span>Type</span><strong>{source.content_type}</strong></div>
             </div>
-            {documentUrl && source.content_type === "text" ? null : null}
             <div className="source-actions">
               {documentUrl && source.document?.toLowerCase().endsWith(".pdf") && (
                 <a className="document-link" href={documentUrl} target="_blank" rel="noreferrer">
