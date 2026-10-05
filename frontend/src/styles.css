@@ -45,3 +45,72 @@
 .workspace-advisor{border:1px solid #c7d0db;min-width:220px}.workspace-advisor b{font-size:10px}.workspace-advisor span{font-size:9px}
 
 .upload-modal{width:min(620px,94vw);background:white;border:1px solid #c8d0da;border-radius:16px;box-shadow:0 30px 80px rgba(16,23,34,.22);padding:24px}.upload-header{display:flex;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:1px solid var(--line)}.upload-header h2{margin:8px 0 4px;font:700 24px "Space Grotesk"}.upload-header p{margin:0;color:var(--muted);font-size:11px}.upload-form{display:grid;gap:15px;padding-top:18px}.upload-drop{min-height:190px;display:grid;place-items:center;align-content:center;gap:7px;border:1px dashed #aeb8c5;border-radius:13px;background:#fafbfc;color:#526071;text-align:center;cursor:pointer}.upload-drop input{position:absolute;width:1px;height:1px;opacity:0}.upload-drop b{font-size:13px}.upload-drop span{font-size:10px;color:var(--subtle)}.upload-field{display:grid;gap:7px}.upload-field>span{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--subtle)}.upload-status{padding:10px 12px;border:1px solid #c8dfcf;border-radius:9px;background:#f4faf5;color:#39734b;font-size:10px}.upload-actions{display:flex;justify-content:flex-end;gap:8px}.upload-actions button:disabled{opacity:.4;cursor:not-allowed}
+
+
+/* CHANAKYA chat experience upgrade */
+.toolbar-actions{display:flex;align-items:center;gap:9px}
+.chat-refresh-button{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 10px;border:1px solid var(--line-strong);border-radius:9px;background:white;color:#4b5664;cursor:pointer;font-size:10px;font-weight:700}
+.chat-refresh-button:disabled{opacity:.45;cursor:not-allowed}
+.chat-refresh-button svg{color:var(--saffron-dark)}
+.knowledge-heading-tools{display:flex;align-items:center;gap:9px}
+.knowledge-count{display:inline-flex;align-items:center;min-height:34px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:#fafbfc;color:var(--subtle);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+
+/* Remove duplicate add-document CTA from the page. The global action owns ingestion. */
+.page-heading-row>.primary-action{display:none}
+
+/* Interactive 3D intelligence core */
+.chat-hero{position:relative;min-height:270px;display:grid;grid-template-columns:1.05fr .95fr;align-items:center;overflow:hidden;margin-bottom:14px;padding:20px 24px;border:1px solid #cfd6df;border-radius:16px;background:radial-gradient(circle at 28% 45%,rgba(255,247,232,.95),transparent 36%),linear-gradient(135deg,#fff,#f5f7fa);box-shadow:0 14px 34px rgba(23,37,59,.06)}
+.chat-hero:before{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(23,37,59,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(23,37,59,.025) 1px,transparent 1px);background-size:28px 28px;mask-image:linear-gradient(90deg,black,transparent 78%)}
+.chat-hero__visual{position:relative;min-height:245px;display:grid;place-items:center;perspective:1000px;transform-style:preserve-3d}
+.chat-hero__visual:before{content:"";position:absolute;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,rgba(212,125,19,.17),transparent 68%);filter:blur(8px);animation:core-pulse 3.8s ease-in-out infinite}
+.chat-hero__visual .chanakya-orb{width:245px;height:245px;animation:core-float 5s ease-in-out infinite}
+.chat-hero__visual .orb-ring--one{animation:orbit 8s linear infinite}
+.chat-hero__visual .orb-ring--two{animation:orbit2 11s linear infinite reverse}
+.chat-hero__signal{position:absolute;border:1px solid rgba(212,125,19,.22);border-radius:50%;pointer-events:none}
+.chat-hero__signal:after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:var(--saffron);box-shadow:0 0 14px rgba(212,125,19,.45)}
+.signal-one{width:210px;height:210px;animation:signal-orbit 7s linear infinite}
+.signal-one:after{top:4px;left:50%;transform:translateX(-50%)}
+.signal-two{width:165px;height:165px;transform:rotateX(65deg);animation:signal-orbit-flat 6s linear infinite}
+.signal-two:after{right:7px;top:50%;transform:translateY(-50%)}
+.chat-hero__copy{position:relative;z-index:2;max-width:430px}
+.chat-hero__copy h2{margin:7px 0 7px;font:700 clamp(24px,3vw,34px)/1 "Space Grotesk";letter-spacing:-.045em}
+.chat-hero__copy p{max-width:390px;margin:0;color:var(--muted);font-size:12px;line-height:1.7}
+.chat-hero__trust{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:15px;color:var(--muted);font-size:9px;font-weight:700}
+.chat-hero__trust span{display:inline-flex;align-items:center;gap:5px}
+.chat-hero__trust svg{color:var(--green)}
+.orb-mascot__float{display:contents}
+.chanakya-orb .orb-mascot{animation:mascot-breathe 4.2s ease-in-out infinite}
+@keyframes core-float{0%,100%{transform:translateY(2px) rotateX(0deg)}50%{transform:translateY(-7px) rotateX(2deg)}}
+@keyframes mascot-breathe{0%,100%{filter:drop-shadow(0 12px 17px rgba(23,37,59,.08))}50%{filter:drop-shadow(0 20px 25px rgba(23,37,59,.16))}}
+@keyframes core-pulse{0%,100%{transform:scale(.94);opacity:.7}50%{transform:scale(1.08);opacity:1}}
+@keyframes signal-orbit{to{transform:rotate(360deg)}}
+@keyframes signal-orbit-flat{to{transform:rotateX(65deg) rotateZ(360deg)}}
+
+/* Keep cards calm: no pointer-follow/hover movement */
+.magic-card,.document-card,.scene-node{transition:none!important}
+.magic-card:hover,.document-card:hover{transform:none!important;box-shadow:0 4px 18px rgba(23,37,59,.045)!important}
+.magic-card__spotlight{display:none!important}
+
+/* Better document viewer surface */
+.document-viewer{background:#e9edf2}
+.pdf-frame{background:#59636f}
+
+/* Small-screen chat hero */
+@media (max-width:780px){
+  .toolbar-actions{width:100%;justify-content:space-between}
+  .chat-hero{grid-template-columns:1fr;min-height:430px;padding:15px}
+  .chat-hero__visual{min-height:235px;order:1}
+  .chat-hero__copy{order:2;text-align:center;justify-self:center}
+  .chat-hero__copy p{margin-inline:auto}
+  .chat-hero__trust{justify-content:center}
+  .knowledge-heading-tools{width:100%;justify-content:space-between}
+}
+@media (max-width:520px){
+  .chat-refresh-button span{display:none}
+  .chat-refresh-button{width:34px;padding:0;justify-content:center}
+  .chat-hero{min-height:400px}
+  .chat-hero__visual .chanakya-orb{transform:scale(.9)}
+}
+@media (prefers-reduced-motion:reduce){
+  .chat-hero__visual .chanakya-orb,.chanakya-orb .orb-mascot,.chat-hero__signal,.chat-hero__visual:before{animation:none!important}
+}
