@@ -66,6 +66,17 @@ class Orchestrator:
             return self._done(QueryResult(REFUSAL_MESSAGE, [], [], [], route, "refusal", True), t0)
 
         calcs, facts_text, offline_body = self._numerical_agent(q, evidence, plan.question_type)
+        stat = T.descriptive_statistics(q, evidence, self.kb.chunks.values())
+        if stat:
+            stat_result = nx.CalcResult(
+                stat["value"],
+                stat.get("unit", ""),
+                stat["formula"],
+                (stat["source_id"],),
+            )
+            calcs.append(Calc(stat["kind"], stat_result, stat["text"]))
+            facts_text.append(stat["text"])
+            offline_body = stat["text"] + (f" {offline_body}" if offline_body else "")
         calc_lines = [c.text for c in calcs]
         calc_vals = [v for c in calcs for v in (c.result.value, abs(c.result.value))]
         notice = ""
