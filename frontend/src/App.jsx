@@ -5,6 +5,7 @@ import {
   MagnifyingGlass, Plus, Pulse, ShieldCheck, Sparkle, Stack, X
 } from "@phosphor-icons/react";
 import { ChanakyaOrb } from "./components/ChanakyaOrb";
+import { queryChanakya, getHealth, getDocuments, getEvaluation, getSource } from "./api/chanakya";
 import { MagicCard } from "./components/MagicCard";
 import { ProjectScene } from "./components/ProjectScene";
 import { DocumentViewer } from "./components/DocumentViewer";
@@ -53,17 +54,13 @@ function App() {
 
   const refreshSystem = async () => {
     try {
-      const [h, d, e] = await Promise.all([
-        fetch(API + "/health").then((r) => r.json()),
-        fetch(API + "/documents").then((r) => r.json()),
-        fetch(API + "/evaluation/summary").then((r) => r.ok ? r.json() : null),
-      ]);
+      const [h, d, e] = await Promise.all([getHealth(), getDocuments(), getEvaluation()]);
       setHealth(h);
-      setDocs(Array.isArray(d) ? d.map((doc) => ({ ...doc, chunks: doc.chunks ?? doc.n_chunks ?? 0 })) : []);
+      setDocs(d);
       setEvaluation(e);
       setError("");
-    } catch {
-      setError("CHANAKYA API is not reachable. Keep the backend running on port 8000.");
+    } catch (err) {
+      setError(err.message || "CHANAKYA API is not reachable. Keep the backend running on port 8000.");
     }
   };
 
@@ -85,73 +82,21 @@ function App() {
   const ask = async (preset) => {
     const q = (preset ?? question).trim();
     if (!q || loading) return;
-
     setActiveTab("workspace");
     setQuestion("");
     setError("");
     setShowSuggestions(false);
     const assistantIndex = messages.length + 1;
-    setMessages((current) => [
-      ...current,
-      { role: "user", content: q },
-      { role: "assistant", content: "", streaming: true },
-    ]);
+    setMessages((current) => [...current, { role: "user", content: q }, { role: "assistant", content: "", streaming: true }]);
     setLoading(true);
-
     try {
-      const response = await fetch(API + "/query/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, department: department || null }),
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload?.error?.message || "Request failed (" + response.status + ")");
-      }
-      if (!response.body) throw new Error("Streaming is not available in this browser.");
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let answer = "";
-      let finalResult = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        buffer = buffer.replace(/\r\n/g, "\n");
-        while (buffer.includes("\n\n")) {
-          const index = buffer.indexOf("\n\n");
-          const event = buffer.slice(0, index);
-          buffer = buffer.slice(index + 2);
-          const type = event.match(/event:\s*(\w+)/)?.[1];
-          const data = event.match(/data:\s*(.*)/s)?.[1];
-          if (!type || data == null) continue;
-          const parsed = JSON.parse(data);
-
-          if (type === "token") {
-            answer += parsed;
-            setMessages((current) => current.map((message, i) =>
-              i === assistantIndex ? { ...message, content: answer } : message
-            ));
-          }
-          if (type === "done") finalResult = parsed;
-        }
-      }
-
+      const result = await queryChanakya(q, department || null);
       setMessages((current) => current.map((message, i) =>
-        i === assistantIndex
-          ? { ...message, content: finalResult?.answer || answer, result: finalResult, streaming: false }
-          : message
+        i === assistantIndex ? { ...message, content: result.answer || "No answer was returned.", result, streaming: false } : message
       ));
     } catch (err) {
       setMessages((current) => current.map((message, i) =>
-        i === assistantIndex
-          ? { ...message, content: "I couldn't complete that request.", streaming: false, error: err.message }
-          : message
+        i === assistantIndex ? { ...message, content: "I couldn't complete that request.", streaming: false, error: err.message } : message
       ));
     } finally {
       setLoading(false);
@@ -161,14 +106,15 @@ function App() {
   };
 
   const openSource = async (item) => {
-    if (!item?.chunk_id) return;
     setSourceLoading(true);
     setSource(null);
     try {
-      const response = await fetch(API + "/sources/" + item.chunk_id);
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message || "Source unavailable");
-      setSource({ ...payload, document: payload.document_name || item.document || "Retrieved source" });
+      if (item?.chunk_id) {
+        const payload = await getSource(item.chunk_id);
+        setSource({ ...payload, document: payload.document_name || item.document || "Retrieved source" });
+      } else {
+        setSource({ ...item, text: item.text || "Source metadata is available, but no chunk identifier was returned." });
+      }
     } catch (err) {
       setSource({ error: err.message });
     } finally {
