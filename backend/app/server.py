@@ -196,7 +196,7 @@ def make_handler(app: App) -> type[BaseHTTPRequestHandler]:
                         # Use the configured persistence instance directly. Avoid a strict
                         # isinstance check here because module reloads/import paths can produce a
                         # different class identity even when the backend is correctly configured.
-                        storage = app.kb.persistence
+                        storage = app.kb.persist
                         if not all(hasattr(storage, attr) for attr in ("_req", "bucket")):
                             return self._err(500, "storage_error", "document storage is not configured correctly")
                         object_path = f"{doc.document_id}_{doc.name}"
