@@ -193,8 +193,11 @@ def make_handler(app: App) -> type[BaseHTTPRequestHandler]:
                             return self._err(400, "invalid_path", "invalid document path")
                         data = path.read_bytes()
                     else:
-                        from .persistence import SupabasePersistence
-                        if not isinstance(app.kb.persistence, SupabasePersistence):
+                        # Use the configured persistence instance directly. Avoid a strict
+                        # isinstance check here because module reloads/import paths can produce a
+                        # different class identity even when the backend is correctly configured.
+                        storage = app.kb.persistence
+                        if not all(hasattr(storage, attr) for attr in ("_req", "bucket")):
                             return self._err(500, "storage_error", "document storage is not configured correctly")
                         object_path = f"{doc.document_id}_{doc.name}"
                         try:
