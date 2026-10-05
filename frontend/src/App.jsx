@@ -59,7 +59,7 @@ function App() {
         fetch(API + "/evaluation/summary").then((r) => r.ok ? r.json() : null),
       ]);
       setHealth(h);
-      setDocs(Array.isArray(d) ? d : []);
+      setDocs(Array.isArray(d) ? d.map((doc) => ({ ...doc, chunks: doc.chunks ?? doc.n_chunks ?? 0 })) : []);
       setEvaluation(e);
       setError("");
     } catch {
@@ -122,12 +122,12 @@ function App() {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        buffer = buffer.replace(/\\r\\n/g, "\\n");
+        buffer = buffer.replace(/\r\n/g, "\n");
         while (buffer.includes("\n\n")) {
           const index = buffer.indexOf("\n\n");
           const event = buffer.slice(0, index);
           buffer = buffer.slice(index + 2);
-          const type = event.match(/event:\s*(\\w+)/)?.[1];
+          const type = event.match(/event:\s*(\w+)/)?.[1];
           const data = event.match(/data:\s*(.*)/s)?.[1];
           if (!type || data == null) continue;
           const parsed = JSON.parse(data);
