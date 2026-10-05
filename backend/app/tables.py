@@ -83,21 +83,21 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
     if not metric_tokens:
         return None
 
-    candidates: list[tuple[float, TableView, int, list[Decimal], int]] = []
-    seen_tables: set[str] = set()
-
-    for ev in table_evidence:
-        c = ev.chunk
-        table_key = c.table_id or f"{c.document_id}:{c.section}:{c.document_name}"
-        if table_key in seen_tables:
+    candidates: list[tuple[float, TableView, int, list[Decimal], int, str]] = []
+    logical_tables: dict[str, list] = {}
+    for x in all_chunks:
+        if x.content_type != "table":
             continue
-        seen_tables.add(table_key)
+        key = x.table_id or f"{x.document_id}:{x.section}:{x.document_name}"
+        logical_tables.setdefault(key, []).append(x)
 
-        matching = [
-            x for x in all_chunks
-            if x.content_type == "table"
-            and (x.table_id or f"{x.document_id}:{x.section}:{x.document_name}") == table_key
-        ]
+    evidence_by_table = {}
+    for ev in table_evidence:
+        key = ev.chunk.table_id or f"{ev.chunk.document_id}:{ev.chunk.section}:{ev.chunk.document_name}"
+        evidence_by_table.setdefault(key, []).append(ev)
+
+    for table_key, matching in logical_tables.items():
+        c = min(matching, key=lambda x: (x.page_start, x.chunk_id))
         if not matching:
             matching = [c]
 
@@ -141,13 +141,21 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
                 continue
 
         if values:
-            tv = TableView(ev.source_id, c.document_name, header, rows, c.section)
-            candidates.append((best_col[0], tv, ci, values, ev.source_id))
+            evs = evidence_by_table.get(table_key, [])
+            sid = evs[0].source_id if evs else -1
+            ev_score = evs[0].score if evs else 0.0
+            context_tokens = set(qtokens(c.document_name + " " + c.section + " " + " ".join(header)))
+            context_overlap = len(context_tokens & metric_tokens) / max(len(metric_tokens), 1)
+            total_score = best_col[0] + 0.6 * context_overlap + 0.15 * min(ev_score, 1.0)
+            tv = TableView(sid, c.document_name, header, rows, c.section)
+            candidates.append((total_score, tv, ci, values, sid, c.chunk_id))
 
     if not candidates:
         return None
 
-    _, tv, ci, values, sid = max(candidates, key=lambda x: (x[0], len(x[3])))
+    _, tv, ci, values, sid, representative_chunk_id = max(
+        candidates, key=lambda x: (x[0], len(x[3]))
+    )
     n = len(values)
     total = sum(values, Decimal(0))
     mean = total / n
@@ -170,7 +178,7 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
             "text": f"{kind.title()} for {tv.header[ci]}: {nx.quantize(result, 4)} "
                     f"(sample; population standard deviation = {nx.quantize(population_std, 4)}) "
                     f"over {n} numeric values [{sid}].",
-            "source_id": sid, "kind": "std",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "std",
         }
 
     if STAT_AVG.search(query):
@@ -178,7 +186,7 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
             "metric": tv.header[ci], "n": n, "value": mean, "unit": "",
             "formula": f"{nx.quantize(total, 4)} / {n}",
             "text": f"Average {tv.header[ci]}: {nx.quantize(mean, 4)} = {nx.quantize(total, 4)} / {n} [{sid}].",
-            "source_id": sid, "kind": "average",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "average",
         }
 
     if STAT_MEDIAN.search(query):
@@ -186,7 +194,7 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
             "metric": tv.header[ci], "n": n, "value": median, "unit": "",
             "formula": f"median of {n} sorted values",
             "text": f"Median {tv.header[ci]}: {nx.quantize(median, 4)} over {n} numeric values [{sid}].",
-            "source_id": sid, "kind": "median",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "median",
         }
 
     if STAT_SUM.search(query):
@@ -194,7 +202,7 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
             "metric": tv.header[ci], "n": n, "value": total, "unit": "",
             "formula": f"sum of {n} values",
             "text": f"Total {tv.header[ci]}: {nx.quantize(total, 4)} over {n} numeric values [{sid}].",
-            "source_id": sid, "kind": "sum",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "sum",
         }
 
     if STAT_COUNT.search(query):
@@ -202,7 +210,7 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
             "metric": tv.header[ci], "n": n, "value": Decimal(n), "unit": "",
             "formula": f"count of {n} numeric values",
             "text": f"Count of numeric {tv.header[ci]} values: {n} [{sid}].",
-            "source_id": sid, "kind": "count",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "count",
         }
 
     if STAT_MIN.search(query):
@@ -211,7 +219,7 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
             "metric": tv.header[ci], "n": n, "value": value, "unit": "",
             "formula": f"minimum of {n} values",
             "text": f"Minimum {tv.header[ci]}: {nx.quantize(value, 4)} [{sid}].",
-            "source_id": sid, "kind": "min",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "min",
         }
 
     if STAT_MAX.search(query):
@@ -220,7 +228,7 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
             "metric": tv.header[ci], "n": n, "value": value, "unit": "",
             "formula": f"maximum of {n} values",
             "text": f"Maximum {tv.header[ci]}: {nx.quantize(value, 4)} [{sid}].",
-            "source_id": sid, "kind": "max",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "max",
         }
 
     return None
