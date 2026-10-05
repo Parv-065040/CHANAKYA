@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowClockwise, ArrowUp, BookOpenText, CaretDown, CheckCircle, CircleNotch,
   Cpu, Database, FileText, Funnel, Gauge, Graph, House, LinkSimple,
-  MagnifyingGlass, Plus, Pulse, ShieldCheck, Sparkle, Stack, X
+  MagnifyingGlass, Plus, Pulse, ShieldCheck, Sparkle, Stack, X, Calculator,
+  ChartLineUp, Hash
 } from "@phosphor-icons/react";
 import { ChanakyaOrb } from "./components/ChanakyaOrb";
 import { queryChanakya, getHealth, getDocuments, getEvaluation, getSource, uploadDocument } from "./api/chanakya";
@@ -274,14 +275,114 @@ function HomeView({ health, docs, evaluation, onAsk, onKnowledge }) {
   );
 }
 
+function cleanCitation(text) {
+  return String(text || "").replace(/\s*\[\d+\](?=[.,;:]?\s*$)/, "").trim();
+}
+
 function renderAnswerText(text) {
-  const parts = String(text || "").split(/(\*\*[^*]+\*\*)/g);
+  const parts = cleanCitation(text).split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return <strong key={index}>{part.slice(2, -2)}</strong>;
     }
     return <span key={index}>{part}</span>;
   });
+}
+
+function parseCalculation(text) {
+  const raw = cleanCitation(text);
+
+  const sd = raw.match(
+    /Standard Deviation(?: for)?\s+(.+?)\s*\([^)]*\):\s*([\d.]+)\s*\(sample;\s*population standard deviation\s*=\s*([\d.]+)\)\s*over\s*(\d+)\s*numeric values/i
+  );
+
+  if (sd) {
+    return {
+      kind: "standard-deviation",
+      label: sd[1].trim(),
+      sample: sd[2],
+      population: sd[3],
+      count: sd[4],
+    };
+  }
+
+  const average = raw.match(
+    /Average\s+(.+?)\s*:\s*([\d.]+)\s*=\s*([\d.]+)\s*\/\s*(\d+)/i
+  );
+
+  if (average) {
+    return {
+      kind: "average",
+      label: average[1].trim(),
+      value: average[2],
+      total: average[3],
+      count: average[4],
+    };
+  }
+
+  return {
+    kind: "generic",
+    text: raw,
+  };
+}
+
+function CalculationCard({ calculation }) {
+  const parsed = parseCalculation(calculation);
+  const icon = parsed.kind === "standard-deviation" ? ChartLineUp : Calculator;
+  const Icon = icon;
+
+  if (parsed.kind === "standard-deviation") {
+    return (
+      <div className="calculation-card calculation-card--stats">
+        <div className="calculation-card__header">
+          <div className="calculation-card__title">
+            <span className="calculation-card__icon"><Icon size={15} /></span>
+            <div><span className="mini-label">Calculation</span><strong>Standard deviation</strong></div>
+          </div>
+          <span className="calculation-card__verified"><CheckCircle size={12} weight="fill" /> Verified</span>
+        </div>
+        <div className="calculation-metrics">
+          <div><span>Sample SD</span><strong>{parsed.sample}</strong><small>Rs crore</small></div>
+          <div><span>Population SD</span><strong>{parsed.population}</strong><small>Rs crore</small></div>
+          <div><span>Observations</span><strong>{parsed.count}</strong><small>numeric values</small></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (parsed.kind === "average") {
+    return (
+      <div className="calculation-card calculation-card--average">
+        <div className="calculation-card__header">
+          <div className="calculation-card__title">
+            <span className="calculation-card__icon"><Icon size={15} /></span>
+            <div><span className="mini-label">Calculation</span><strong>Average</strong></div>
+          </div>
+          <span className="calculation-card__verified"><CheckCircle size={12} weight="fill" /> Verified</span>
+        </div>
+        <div className="calculation-average">
+          <div><span>{parsed.label}</span><strong>{parsed.value}</strong><small>Rs crore</small></div>
+          <div className="calculation-equation">
+            <span>Formula</span>
+            <b>{parsed.total} ÷ {parsed.count}</b>
+          </div>
+          <div><span>Observations</span><strong>{parsed.count}</strong><small>numeric values</small></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="calculation-card calculation-card--generic">
+      <div className="calculation-card__header">
+        <div className="calculation-card__title">
+          <span className="calculation-card__icon"><Icon size={15} /></span>
+          <div><span className="mini-label">Calculation</span><strong>Verified calculation</strong></div>
+        </div>
+      </div>
+      <div className="calculation-generic">{parsed.text}</div>
+    </div>
+  );
 }
 
 function WorkspaceView({ department, setDepartment, selectedDepartment, messages, question, setQuestion, loading, showSuggestions, inputRef, logRef, ask, onSource, onRefresh, health }) {
@@ -359,9 +460,16 @@ function Message({ message, onSource }) {
             <span className={result.grounded ? "grounded" : "warning"}>{result.grounded ? <CheckCircle size={14} weight="fill" /> : <ShieldCheck size={14} />}{result.grounded ? "Grounded" : "Review sources"}</span>
             <span>{result.mode === "llm" ? "LLM verified" : "Evidence mode"}</span>{result.latency_ms ? <span>{result.latency_ms} ms</span> : null}
           </div>
-          {result.calculations?.length > 0 && <div className="calculation-strip"><div className="mini-label">Calculation trail</div>{result.calculations.map((item, i) => <div key={i}>{item}</div>)}</div>}
+          {result.calculations?.length > 0 && (
+  <div className="calculation-stack">
+    {result.calculations.map((item, i) => <CalculationCard key={i} calculation={item} />)}
+  </div>
+)}
           {result.sources?.length > 0 && <div className="sources-block">
-            <div className="section-heading"><span>Retrieved context</span><small>Open any source for the exact indexed chunk</small></div>
+            <div className="section-heading">
+  <div className="section-heading__title"><span>Source</span><small>{result.sources.length} indexed {result.sources.length === 1 ? "source" : "sources"}</small></div>
+  <small>Exact evidence attached</small>
+</div>
             <div className="source-list">{result.sources.map((item) => <button key={item.source_id} className="source-chip" onClick={() => onSource(item)} disabled={!item.chunk_id}>
               <FileText size={15} weight="duotone" /><span className="source-chip__text"><strong>[{item.source_id}] {item.document}</strong><small>Page {item.page}{item.section ? " · " + item.section : ""}</small></span><LinkSimple size={14} />
             </button>)}</div>
