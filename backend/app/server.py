@@ -178,21 +178,31 @@ def make_handler(app: App) -> type[BaseHTTPRequestHandler]:
                         return self._err(404, "not_found", "document not found")
                     if ident[1] is not None and doc.department not in ident[1]:
                         return self._err(403, "forbidden", "no access to department")
-                    if app.settings.storage_backend != "local":
-                        return self._err(501, "not_supported", "document preview is currently available for local storage only")
-                    root = Path(app.settings.data_dir).resolve() / "files"
-                    matches = list(root.glob(f"{doc.document_id}_{doc.name}"))
-                    if not matches:
-                        return self._err(404, "not_found", "document file not found")
-                    path = matches[0].resolve()
-                    if root not in path.parents:
-                        return self._err(400, "invalid_path", "invalid document path")
                     ctype = {
                         ".pdf": "application/pdf",
                         ".csv": "text/csv; charset=utf-8",
                         ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    }.get(path.suffix.lower(), "application/octet-stream")
-                    data = path.read_bytes()
+                    }.get(Path(doc.name).suffix.lower(), "application/octet-stream")
+                    if app.settings.storage_backend == "local":
+                        root = Path(app.settings.data_dir).resolve() / "files"
+                        matches = list(root.glob(f"{doc.document_id}_{doc.name}"))
+                        if not matches:
+                            return self._err(404, "not_found", "document file not found")
+                        path = matches[0].resolve()
+                        if root not in path.parents:
+                            return self._err(400, "invalid_path", "invalid document path")
+                        data = path.read_bytes()
+                    else:
+                        from .persistence import SupabasePersistence
+                        if not isinstance(app.kb.persistence, SupabasePersistence):
+                            return self._err(500, "storage_error", "document storage is not configured correctly")
+                        object_path = f"/storage/v1/object/{app.kb.persistence.bucket}/{doc.document_id}_{doc.name}"
+                        try:
+                            response = app.kb.persistence._req("GET", object_path)
+                            data = response.content
+                        except RuntimeError as exc:
+                            log.warning("document fetch failed for %s: %s", doc.document_id, exc)
+                            return self._err(404, "not_found", "document file is not available in document storage")
                     self.send_response(200)
                     self.send_header("Content-Type", ctype)
                     self.send_header("Content-Length", str(len(data)))
