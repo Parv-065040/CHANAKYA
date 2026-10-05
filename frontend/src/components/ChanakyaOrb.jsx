@@ -26,6 +26,7 @@ export function ChanakyaOrb({ compact = false }) {
       <div className="orb-ring orb-ring--one" aria-hidden="true" />
       <div className="orb-ring orb-ring--two" aria-hidden="true" />
       <div ref={faceRef} className="orb-mascot">
+        <div className="orb-mascot__float">
         <div className="mascot-crown"><Sparkle weight="fill" size={16} /></div>
         <div className="mascot-face">
           <div className="mascot-eyes"><span /><span /></div>
@@ -35,6 +36,7 @@ export function ChanakyaOrb({ compact = false }) {
         </div>
         <div className="mascot-collar"><BookOpenText size={18} weight="bold" /></div>
         <div className="mascot-brain"><Brain size={17} weight="duotone" /></div>
+        </div>
       </div>
     </div>
   );
