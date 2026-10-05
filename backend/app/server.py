@@ -16,7 +16,7 @@ from collections import defaultdict, deque
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 from .config import Settings
 from .core.router import DEFAULT_DEPARTMENTS
@@ -197,27 +197,38 @@ def make_handler(app: App) -> type[BaseHTTPRequestHandler]:
                         if not isinstance(app.kb.persistence, SupabasePersistence):
                             return self._err(500, "storage_error", "document storage is not configured correctly")
                         object_path = f"{doc.document_id}_{doc.name}"
+                        encoded_object_path = quote(object_path, safe="/")
                         try:
                             # Generate a short-lived signed Storage URL and redirect the browser to it.
-                            # This lets Chrome's native PDF viewer render the real PDF instead of
-                            # forcing the API server to proxy multi-megabyte binary files.
-                            signed = app.kb.persistence._req(
+                            # Supabase documents this endpoint as POST /object/sign/{bucket}/{path}.
+                            # URL-encode the object key so filenames with spaces or punctuation are safe.
+                            response = app.kb.persistence._req(
                                 "POST",
-                                f"/storage/v1/object/sign/{app.kb.persistence.bucket}/{object_path}",
+                                f"/storage/v1/object/sign/{app.kb.persistence.bucket}/{encoded_object_path}",
                                 json={"expiresIn": 3600},
                                 headers={"Content-Type": "application/json"},
-                            ).json()
+                            )
+                            signed = response.json()
                             signed_path = signed.get("signedURL") or signed.get("signedUrl")
                             if not signed_path:
-                                raise RuntimeError("Supabase did not return a signed URL")
+                                raise RuntimeError(f"Supabase did not return signedURL: {signed!r}")
                             if signed_path.startswith("http://") or signed_path.startswith("https://"):
                                 location = signed_path
                             else:
                                 location = f"{app.kb.persistence.base}{signed_path}"
-                        except RuntimeError as exc:
-                            log.warning("document signed URL failed for %s: %s", doc.document_id, exc)
+                            self.send_response(302)
+                            self.send_header("Location", location)
+                            self.send_header("Access-Control-Allow-Origin", app.settings.cors_origin)
+                            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+                            self.send_header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
+                            self.end_headers()
+                            return
+                        except Exception as exc:
+                            # Keep the real server-side failure visible in logs while returning a
+                            # useful response to the browser. This also catches JSON/HTTP errors
+                            # that are not RuntimeError subclasses.
+                            log.exception("document signed URL failed for %s (%s): %s", doc.document_id, object_path, exc)
                             return self._err(404, "not_found", "document file is not available in document storage")
-                        self.send_response(302)
                         self.send_header("Location", location)
                         self.send_header("Access-Control-Allow-Origin", app.settings.cors_origin)
                         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
