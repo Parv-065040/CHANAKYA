@@ -205,9 +205,9 @@ def make_handler(app: App) -> type[BaseHTTPRequestHandler]:
                             # server-side so the Supabase service-role key never reaches the browser.
                             # The upload limit is small enough for this to be practical and it avoids
                             # relying on Storage signed-URL response formats.
-                            stored = app.kb.persistence._req(
+                            stored = storage._req(
                                 "GET",
-                                f"/storage/v1/object/{app.kb.persistence.bucket}/{quote(object_path, safe='/')}",
+                                f"/storage/v1/object/{storage.bucket}/{quote(object_path, safe='/')}",
                             )
                             data = stored.content
                         except Exception as exc:
