@@ -12,23 +12,16 @@ export function ChanakyaOrb({ compact = false }) {
     const rect = stage.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width - 0.5;
     const y = (event.clientY - rect.top) / rect.height - 0.5;
-    face.style.transform = `rotateX(${-y * 10}deg) rotateY(${x * 12}deg) translateZ(22px)`;
+    face.style.transform = "rotateX(" + (-y * 8) + "deg) rotateY(" + (x * 10) + "deg) translateZ(22px)";
   };
 
   const leave = () => {
-    if (faceRef.current) {
-      faceRef.current.style.transform = "rotateX(0deg) rotateY(0deg) translateZ(0)";
-    }
+    if (faceRef.current) faceRef.current.style.transform = "rotateX(0deg) rotateY(0deg) translateZ(0)";
   };
 
   return (
-    <div
-      ref={stageRef}
-      className={`chanakya-orb ${compact ? "chanakya-orb--compact" : ""}`}
-      onPointerMove={move}
-      onPointerLeave={leave}
-      aria-label="CHANAKYA wisdom mascot"
-    >
+    <div ref={stageRef} className={`chanakya-orb ${compact ? "chanakya-orb--compact" : ""}`}
+      onPointerMove={move} onPointerLeave={leave} aria-label="CHANAKYA wisdom mascot">
       <div className="orb-grid" aria-hidden="true" />
       <div className="orb-ring orb-ring--one" aria-hidden="true" />
       <div className="orb-ring orb-ring--two" aria-hidden="true" />
@@ -38,6 +31,7 @@ export function ChanakyaOrb({ compact = false }) {
           <div className="mascot-eyes"><span /><span /></div>
           <div className="mascot-tilak" />
           <div className="mascot-beard" />
+          <div className="mascot-mouth" />
         </div>
         <div className="mascot-collar"><BookOpenText size={18} weight="bold" /></div>
         <div className="mascot-brain"><Brain size={17} weight="duotone" /></div>
