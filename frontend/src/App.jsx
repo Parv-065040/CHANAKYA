@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowUp, BookOpenText, CaretDown, ChartLineUp, CheckCircle, CircleNotch,
-  Cpu, Database, FileText, Funnel, Gauge, GearSix, Graph, House, LinkSimple,
+  ArrowUp, BookOpenText, CaretDown, CheckCircle, CircleNotch,
+  Cpu, Database, FileText, Funnel, Gauge, Graph, House, LinkSimple,
   MagnifyingGlass, Plus, Pulse, ShieldCheck, Sparkle, Stack, X
 } from "@phosphor-icons/react";
 import { ChanakyaOrb } from "./components/ChanakyaOrb";
@@ -32,7 +32,6 @@ const navItems = [
   { id: "home", label: "Overview", icon: House },
   { id: "workspace", label: "Ask CHANAKYA", icon: Sparkle },
   { id: "knowledge", label: "Knowledge", icon: Stack },
-  { id: "analytics", label: "Analytics", icon: ChartLineUp },
 ];
 
 function App() {
@@ -237,7 +236,7 @@ function App() {
           <KnowledgeView docs={docs} department={department} setDepartment={setDepartment} onOpen={openDocument} />
         )}
 
-        {activeTab === "analytics" && <AnalyticsView health={health} docs={docs} evaluation={evaluation} />}
+
 
         {error && <div className="global-error"><X size={16} /> {error}</div>}
       </main>
@@ -329,7 +328,7 @@ function WorkspaceView({ department, setDepartment, selectedDepartment, messages
     <div className="page page-workspace">
       <div className="workspace-header">
         <div><div className="eyebrow"><Sparkle size={14} weight="fill" /> Governed query workspace</div><h1>Ask CHANAKYA</h1><p>One conversation across the enterprise. Every grounded answer keeps its evidence attached.</p></div>
-        <div className="workspace-side-stat"><ChanakyaOrb compact /><div><b>Evidence mode</b><span>{health?.llm === "groq" ? "LLM + validator" : "Deterministic verified"}</span></div></div>
+        <div className="workspace-advisor"><div className="advisor-mascot"><ChanakyaOrb compact /></div><div><b>Ask naturally.</b><span>I’ll route it and keep the evidence attached.</span></div></div>
       </div>
 
       <section className="workspace-shell">
@@ -405,28 +404,6 @@ function KnowledgeView({ docs, department, setDepartment, onOpen }) {
       <button className="document-open" onClick={() => onOpen(doc, 1)}><BookOpenText size={15} /> Inspect document</button>
     </MagicCard>)}</section>
     {filtered.length === 0 && <div className="empty-state">No documents match this department.</div>}
-  </div>;
-}
-
-function AnalyticsView({ health, docs, evaluation }) {
-  const byDept = docs.reduce((acc, doc) => { acc[doc.department] = (acc[doc.department] || 0) + 1; return acc; }, {});
-  const max = Math.max(1, ...Object.values(byDept));
-  return <div className="page">
-    <div className="page-heading-row"><div><div className="eyebrow"><ChartLineUp size={14} /> Operational intelligence</div><h1>Analytics</h1><p>A control surface for knowledge coverage, runtime state and evaluation quality.</p></div><div className="system-pill"><span className="status-dot is-online" /> Auto-refresh 15s</div></div>
-    <div className="analytics-grid">
-      <MagicCard className="chart-card large"><div className="section-head"><div><span className="micro-label">CORPUS COVERAGE</span><h2>Documents by department</h2></div><Database size={18} /></div>
-        <div className="bar-chart">{Object.entries(byDept).map(([dept, count]) => <div className="bar-row" key={dept}><div className="bar-label">{dept.replace("_", " ")}</div><div className="bar-track"><div className="bar-fill" style={{ width: ((count / max) * 100) + "%" }} /></div><b>{count}</b></div>)}</div>
-      </MagicCard>
-      <MagicCard className="chart-card"><div className="section-head"><div><span className="micro-label">RUNTIME</span><h2>System posture</h2></div><GearSix size={18} /></div>
-        <div className="runtime-list"><RuntimeRow label="API" value={health?.status === "ok" ? "Healthy" : "Connecting"} ok={health?.status === "ok"} /><RuntimeRow label="LLM" value={health?.llm || "—"} ok /><RuntimeRow label="Storage" value={health?.storage || "—"} ok /><RuntimeRow label="Embedding" value={health?.embedding || "—"} ok /><RuntimeRow label="Documents" value={health?.documents ?? docs.length} ok /><RuntimeRow label="Chunks" value={health?.chunks ?? "—"} ok /></div>
-      </MagicCard>
-      <MagicCard className="chart-card"><div className="section-head"><div><span className="micro-label">EVALUATION</span><h2>Quality gate</h2></div><Gauge size={18} /></div>
-        {evaluation ? <div className="score-ring"><div><strong>{Math.round((evaluation.accuracy ?? 0) * 100)}%</strong><span>accuracy</span></div></div> : <div className="not-ready"><Gauge size={28} /><b>No benchmark snapshot</b><span>Run the evaluation suite to populate this panel.</span></div>}
-      </MagicCard>
-      <MagicCard className="chart-card"><div className="section-head"><div><span className="micro-label">ARCHITECTURE</span><h2>Pipeline health</h2></div><Graph size={18} /></div>
-        <div className="pipeline-mini">{["Route", "Retrieve", "Reason", "Validate"].map((item, i) => <div key={item}><span>{i + 1}</span><b>{item}</b><small>{i === 0 ? "query scope" : i === 1 ? "hybrid evidence" : i === 2 ? "tables + numerics" : "citations"}</small></div>)}</div>
-      </MagicCard>
-    </div>
   </div>;
 }
 
