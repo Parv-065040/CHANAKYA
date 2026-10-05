@@ -384,15 +384,14 @@ class HybridRetriever:
                 if not has_complete_chunk:
                     return []
 
-            if (
-                (
-                    cov(kept)
-                    if plan.needs_multi_retrieval
-                    else best_single
-                )
-                < self.min_coverage
-            ):
-                return []
+            # Broad factual/semantic questions do not need every query token
+            # to appear in one chunk. Keep the evidence gate strict for
+            # calculations and multi-source questions, but avoid false refusals
+            # for natural-language knowledge questions.
+            if plan.needs_numerics or plan.needs_multi_retrieval:
+                coverage = cov(kept)
+                if coverage < self.min_coverage:
+                    return []
 
         return kept
 
