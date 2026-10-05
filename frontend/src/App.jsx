@@ -5,7 +5,7 @@ import {
   MagnifyingGlass, Plus, Pulse, ShieldCheck, Sparkle, Stack, X
 } from "@phosphor-icons/react";
 import { ChanakyaOrb } from "./components/ChanakyaOrb";
-import { queryChanakya, getHealth, getDocuments, getEvaluation, getSource } from "./api/chanakya";
+import { queryChanakya, getHealth, getDocuments, getEvaluation, getSource, uploadDocument } from "./api/chanakya";
 import { MagicCard } from "./components/MagicCard";
 import { ProjectScene } from "./components/ProjectScene";
 import { DocumentViewer } from "./components/DocumentViewer";
@@ -49,6 +49,7 @@ function App() {
   const [viewer, setViewer] = useState(null);
   const [error, setError] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [showUpload, setShowUpload] = useState(false);
   const inputRef = useRef(null);
   const logRef = useRef(null);
 
@@ -159,6 +160,7 @@ function App() {
             <span className={"status-dot " + (health?.status === "ok" ? "is-online" : "")} />
             {health?.status === "ok" ? "Operational" : "Connecting"}
           </div>
+          <button className="new-chat-button" onClick={() => setShowUpload(true)}><Plus size={17} weight="bold" /><span>Add document</span></button>
           <button className="new-chat-button" onClick={newConversation}>
             <Plus size={17} weight="bold" /><span>New chat</span>
           </button>
@@ -180,7 +182,7 @@ function App() {
         )}
 
         {activeTab === "knowledge" && (
-          <KnowledgeView docs={docs} department={department} setDepartment={setDepartment} onOpen={openDocument} />
+          <KnowledgeView docs={docs} department={department} setDepartment={setDepartment} onOpen={openDocument} onAdd={() => setShowUpload(true)} />
         )}
 
 
@@ -197,6 +199,7 @@ function App() {
       )}
 
       {viewer && <DocumentViewer document={viewer.doc} page={viewer.page} onClose={() => setViewer(null)} />}
+      {showUpload && <UploadDocumentModal departments={departments.slice(1)} onClose={() => setShowUpload(false)} onUploaded={refreshSystem} uploadDocument={uploadDocument} />}
     </div>
   );
 }
@@ -338,10 +341,10 @@ function Message({ message, onSource }) {
   </div>;
 }
 
-function KnowledgeView({ docs, department, setDepartment, onOpen }) {
+function KnowledgeView({ docs, department, setDepartment, onOpen, onAdd }) {
   const filtered = docs.filter((doc) => !department || doc.department === department);
   return <div className="page">
-    <div className="page-heading-row"><div><div className="eyebrow"><Stack size={14} /> Evidence repository</div><h1>Knowledge base</h1><p>Browse the indexed enterprise corpus and open documents at their source page.</p></div>
+    <div className="page-heading-row"><div><div className="eyebrow"><Stack size={14} /> Evidence repository</div><h1>Knowledge base</h1><p>Browse the indexed enterprise corpus and open documents at their source page.</p></div><button className="primary-action" onClick={onAdd}><Plus size={16} /> Add document</button>
       <div className="select-wrap"><select value={department} onChange={(e) => setDepartment(e.target.value)}><option value="">All departments</option>{departments.slice(1).map((d) => <option key={d.name} value={d.name}>{d.label}</option>)}</select><CaretDown size={14} /></div>
     </div>
     <div className="knowledge-summary"><MetricCard icon={FileText} label="Indexed documents" value={docs.length} detail="Source-of-truth corpus" /><MetricCard icon={Database} label="Departments" value={new Set(docs.map((d) => d.department)).size} detail="Governed routing scopes" /><MetricCard icon={ShieldCheck} label="Provenance" value="PAGE" detail="Page-level source metadata" /></div>
@@ -352,6 +355,34 @@ function KnowledgeView({ docs, department, setDepartment, onOpen }) {
     </MagicCard>)}</section>
     {filtered.length === 0 && <div className="empty-state">No documents match this department.</div>}
   </div>;
+}
+
+function UploadDocumentModal({ departments, onClose, onUploaded, uploadDocument }) {
+  const [file, setFile] = useState(null);
+  const [dept, setDept] = useState(departments[0]?.name || "finance");
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("");
+  const submit = async (event) => {
+    event.preventDefault();
+    if (!file || busy) return;
+    setBusy(true); setStatus("");
+    try {
+      const result = await uploadDocument(file, dept);
+      setStatus(`Indexed: ${result.name} · ${result.n_chunks ?? 0} chunks`);
+      await onUploaded();
+      setTimeout(onClose, 700);
+    } catch (err) { setStatus(err.message || "Upload failed."); }
+    finally { setBusy(false); }
+  };
+  return <div className="viewer-overlay"><section className="upload-modal" role="dialog" aria-modal="true">
+    <div className="upload-header"><div><div className="eyebrow"><Plus size={14}/> Knowledge ingestion</div><h2>Add document</h2><p>Upload a PDF, CSV or XLSX. CHANAKYA will parse, chunk and index it.</p></div><button className="close-button" onClick={onClose}><X size={18}/></button></div>
+    <form onSubmit={submit} className="upload-form">
+      <label className="upload-drop"><input type="file" accept=".pdf,.csv,.xlsx" onChange={e => setFile(e.target.files?.[0] || null)} /><FileText size={28}/><b>{file ? file.name : "Choose a document"}</b><span>{file ? `${Math.round(file.size/1024)} KB selected` : "PDF, CSV or XLSX · up to 25 MB"}</span></label>
+      <label className="upload-field"><span>Department</span><div className="select-wrap"><select value={dept} onChange={e=>setDept(e.target.value)}>{departments.map(d=><option key={d.name} value={d.name}>{d.label}</option>)}</select><CaretDown size={14}/></div></label>
+      {status && <div className="upload-status">{status}</div>}
+      <div className="upload-actions"><button type="button" className="secondary-action" onClick={onClose}>Cancel</button><button className="primary-action" disabled={!file || busy}>{busy ? "Indexing…" : "Index document"}</button></div>
+    </form>
+  </section></div>;
 }
 
 function MetricCard({ icon: Icon, label, value, suffix = "", detail }) {
