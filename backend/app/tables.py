@@ -167,8 +167,8 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
         return {
             "metric": tv.header[ci], "n": n, "value": result, "unit": "",
             "formula": f"{kind} over {n} values",
-            "text": f"{kind.title()} for {tv.header[ci]}: {quantize(result, 4)} "
-                    f"(sample; population standard deviation = {quantize(population_std, 4)}) "
+            "text": f"{kind.title()} for {tv.header[ci]}: {nx.quantize(result, 4)} "
+                    f"(sample; population standard deviation = {nx.quantize(population_std, 4)}) "
                     f"over {n} numeric values [{sid}].",
             "source_id": sid, "kind": "std",
         }
@@ -176,8 +176,8 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
     if STAT_AVG.search(query):
         return {
             "metric": tv.header[ci], "n": n, "value": mean, "unit": "",
-            "formula": f"{quantize(total, 4)} / {n}",
-            "text": f"Average {tv.header[ci]}: {quantize(mean, 4)} = {quantize(total, 4)} / {n} [{sid}].",
+            "formula": f"{nx.quantize(total, 4)} / {n}",
+            "text": f"Average {tv.header[ci]}: {nx.quantize(mean, 4)} = {nx.quantize(total, 4)} / {n} [{sid}].",
             "source_id": sid, "kind": "average",
         }
 
@@ -185,7 +185,7 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
         return {
             "metric": tv.header[ci], "n": n, "value": median, "unit": "",
             "formula": f"median of {n} sorted values",
-            "text": f"Median {tv.header[ci]}: {quantize(median, 4)} over {n} numeric values [{sid}].",
+            "text": f"Median {tv.header[ci]}: {nx.quantize(median, 4)} over {n} numeric values [{sid}].",
             "source_id": sid, "kind": "median",
         }
 
@@ -193,7 +193,7 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
         return {
             "metric": tv.header[ci], "n": n, "value": total, "unit": "",
             "formula": f"sum of {n} values",
-            "text": f"Total {tv.header[ci]}: {quantize(total, 4)} over {n} numeric values [{sid}].",
+            "text": f"Total {tv.header[ci]}: {nx.quantize(total, 4)} over {n} numeric values [{sid}].",
             "source_id": sid, "kind": "sum",
         }
 
@@ -210,7 +210,7 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
         return {
             "metric": tv.header[ci], "n": n, "value": value, "unit": "",
             "formula": f"minimum of {n} values",
-            "text": f"Minimum {tv.header[ci]}: {quantize(value, 4)} [{sid}].",
+            "text": f"Minimum {tv.header[ci]}: {nx.quantize(value, 4)} [{sid}].",
             "source_id": sid, "kind": "min",
         }
 
@@ -219,7 +219,7 @@ def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> 
         return {
             "metric": tv.header[ci], "n": n, "value": value, "unit": "",
             "formula": f"maximum of {n} values",
-            "text": f"Maximum {tv.header[ci]}: {quantize(value, 4)} [{sid}].",
+            "text": f"Maximum {tv.header[ci]}: {nx.quantize(value, 4)} [{sid}].",
             "source_id": sid, "kind": "max",
         }
 
