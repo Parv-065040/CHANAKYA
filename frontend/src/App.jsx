@@ -280,7 +280,7 @@ function renderAnswerText(text) {
     if (part.startsWith("**") && part.endsWith("**")) {
       return <strong key={index}>{part.slice(2, -2)}</strong>;
     }
-    return <React.Fragment key={index}>{part}</React.Fragment>;
+    return <span key={index}>{part}</span>;
   });
 }
 
