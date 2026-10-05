@@ -27,3 +27,15 @@ export async function queryChanakya(question, department = null) {
   return request("/query", { method: "POST", body: JSON.stringify({ question, department }) });
 }
 export async function getSource(chunkId) { return request("/sources/" + encodeURIComponent(chunkId)); }
+
+export async function uploadDocument(file, department) {
+  const params = new URLSearchParams({ filename: file.name, department });
+  const response = await fetch(API + "/documents/upload?" + params.toString(), {
+    method: "POST",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(payload?.error?.message || `Upload failed (${response.status})`);
+  return payload;
+}
