@@ -122,12 +122,13 @@ function App() {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        while (buffer.includes("\\n\\n")) {
-          const index = buffer.indexOf("\\n\\n");
+        buffer = buffer.replace(/\\r\\n/g, "\\n");
+        while (buffer.includes("\n\n")) {
+          const index = buffer.indexOf("\n\n");
           const event = buffer.slice(0, index);
           buffer = buffer.slice(index + 2);
-          const type = event.match(/event: (\\w+)/)?.[1];
-          const data = event.match(/data: (.*)/s)?.[1];
+          const type = event.match(/event:\s*(\\w+)/)?.[1];
+          const data = event.match(/data:\s*(.*)/s)?.[1];
           if (!type || data == null) continue;
           const parsed = JSON.parse(data);
 
@@ -328,7 +329,7 @@ function WorkspaceView({ department, setDepartment, selectedDepartment, messages
     <div className="page page-workspace">
       <div className="workspace-header">
         <div><div className="eyebrow"><Sparkle size={14} weight="fill" /> Governed query workspace</div><h1>Ask CHANAKYA</h1><p>One conversation across the enterprise. Every grounded answer keeps its evidence attached.</p></div>
-        <div className="workspace-advisor"><div className="advisor-mascot"><ChanakyaOrb compact /></div><div><b>Ask naturally.</b><span>I’ll route it and keep the evidence attached.</span></div></div>
+        <div className="workspace-advisor"><div><b>Evidence mode</b><span>{health?.llm === "groq" ? "LLM + validator" : "Deterministic verified"} · sources stay attached</span></div></div>
       </div>
 
       <section className="workspace-shell">
@@ -343,7 +344,7 @@ function WorkspaceView({ department, setDepartment, selectedDepartment, messages
 
         <div className="chat-log" ref={logRef}>
           {messages.length === 0 && <div className="empty-chat">
-            <MagicCard className="welcome-card"><div className="welcome-card__inner"><div className="welcome-icon"><BookOpenText size={22} weight="duotone" /></div><div><div className="welcome-title">What should CHANAKYA investigate?</div><div className="welcome-copy">Ask naturally. Routing is automatic, and retrieved evidence stays attached to the answer.</div></div></div></MagicCard>
+            <MagicCard className="welcome-card"><div className="welcome-card__inner"><div className="welcome-icon"><BookOpenText size={22} weight="duotone" /></div><div><div className="welcome-title">What should CHANAKYA investigate?</div><div className="welcome-copy">Ask naturally. I’ll route the question, retrieve the evidence and attach the source.</div></div></div></MagicCard>
             {showSuggestions && <div className="suggestion-grid">{suggestions.map((item, index) => <button key={item} className="suggestion" onClick={() => ask(item)} style={{ "--delay": (index * 35) + "ms" }}><span>{item}</span><ArrowUp size={15} /></button>)}</div>}
           </div>}
 
