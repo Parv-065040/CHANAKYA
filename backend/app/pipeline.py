@@ -68,6 +68,18 @@ class Orchestrator:
         calcs, facts_text, offline_body = self._numerical_agent(q, evidence, plan.question_type)
         stat = T.descriptive_statistics(q, evidence, self.kb.chunks.values())
         if stat:
+            # A complete logical table may be discovered outside the initial
+            # retrieval set. Promote its representative chunk into evidence so
+            # citations and grounding refer to the actual dataset used.
+            stat_chunk_id = stat.get("chunk_id")
+            stat_chunk = self.kb.chunks.get(stat_chunk_id) if stat_chunk_id else None
+            if stat_chunk is not None and not any(e.chunk.chunk_id == stat_chunk.chunk_id for e in evidence):
+                new_source_id = max((e.source_id for e in evidence), default=0) + 1
+                evidence.append(Evidence(new_source_id, stat_chunk, 1.0))
+                stat["source_id"] = new_source_id
+                stat["text"] = re.sub(r"\[-?1\]$", f"[{new_source_id}]", stat["text"])
+            elif stat.get("source_id", -1) < 0:
+                stat["source_id"] = evidence[-1].source_id
             stat_result = nx.CalcResult(
                 stat["value"],
                 stat.get("unit", ""),
