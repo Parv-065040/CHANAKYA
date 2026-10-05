@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowUp, BookOpenText, CaretDown, CheckCircle, CircleNotch,
+  ArrowClockwise, ArrowUp, BookOpenText, CaretDown, CheckCircle, CircleNotch,
   Cpu, Database, FileText, Funnel, Gauge, Graph, House, LinkSimple,
   MagnifyingGlass, Plus, Pulse, ShieldCheck, Sparkle, Stack, X
 } from "@phosphor-icons/react";
@@ -178,7 +178,8 @@ function App() {
           <WorkspaceView department={department} setDepartment={setDepartment}
             selectedDepartment={selectedDepartment} messages={messages} question={question}
             setQuestion={setQuestion} loading={loading} showSuggestions={showSuggestions}
-            inputRef={inputRef} logRef={logRef} ask={ask} onSource={openSource} health={health} />
+            inputRef={inputRef} logRef={logRef} ask={ask} onSource={openSource}
+            onRefresh={newConversation} health={health} />
         )}
 
         {activeTab === "knowledge" && (
@@ -273,7 +274,7 @@ function HomeView({ health, docs, evaluation, onAsk, onKnowledge }) {
   );
 }
 
-function WorkspaceView({ department, setDepartment, selectedDepartment, messages, question, setQuestion, loading, showSuggestions, inputRef, logRef, ask, onSource, health }) {
+function WorkspaceView({ department, setDepartment, selectedDepartment, messages, question, setQuestion, loading, showSuggestions, inputRef, logRef, ask, onSource, onRefresh, health }) {
   return (
     <div className="page page-workspace">
       <div className="workspace-header">
@@ -288,12 +289,32 @@ function WorkspaceView({ department, setDepartment, selectedDepartment, messages
               {departments.map((item) => <option key={item.name} value={item.name}>{item.label}</option>)}
             </select><CaretDown size={14} /></div>
           </div>
-          <div className="toolbar-note"><span className="live-pip" /> {selectedDepartment} · {health?.documents ?? "—"} sources indexed</div>
+          <div className="toolbar-actions">
+            <div className="toolbar-note"><span className="live-pip" /> {selectedDepartment} · {health?.documents ?? "—"} sources indexed</div>
+            <button className="chat-refresh-button" type="button" onClick={onRefresh} disabled={loading} title="Refresh chat" aria-label="Refresh chat">
+              <ArrowClockwise size={15} /> <span>Refresh chat</span>
+            </button>
+          </div>
         </div>
 
         <div className="chat-log" ref={logRef}>
           {messages.length === 0 && <div className="empty-chat">
-            <MagicCard className="welcome-card"><div className="welcome-card__inner"><div className="welcome-icon"><BookOpenText size={22} weight="duotone" /></div><div><div className="welcome-title">What should CHANAKYA investigate?</div><div className="welcome-copy">Ask naturally. I’ll route the question, retrieve the evidence and attach the source.</div></div></div></MagicCard>
+            <div className="chat-hero">
+              <div className="chat-hero__visual">
+                <ChanakyaOrb />
+                <div className="chat-hero__signal signal-one" />
+                <div className="chat-hero__signal signal-two" />
+              </div>
+              <div className="chat-hero__copy">
+                <div className="micro-label">CHANAKYA INTELLIGENCE CORE</div>
+                <h2>What should I investigate?</h2>
+                <p>Ask naturally. I’ll route the question, retrieve the evidence and keep the source attached.</p>
+                <div className="chat-hero__trust">
+                  <span><CheckCircle weight="fill" /> Evidence first</span>
+                  <span><CheckCircle weight="fill" /> Grounded answers</span>
+                </div>
+              </div>
+            </div>
             {showSuggestions && <div className="suggestion-grid">{suggestions.map((item, index) => <button key={item} className="suggestion" onClick={() => ask(item)} style={{ "--delay": (index * 35) + "ms" }}><span>{item}</span><ArrowUp size={15} /></button>)}</div>}
           </div>}
 
@@ -344,8 +365,8 @@ function Message({ message, onSource }) {
 function KnowledgeView({ docs, department, setDepartment, onOpen, onAdd }) {
   const filtered = docs.filter((doc) => !department || doc.department === department);
   return <div className="page">
-    <div className="page-heading-row"><div><div className="eyebrow"><Stack size={14} /> Evidence repository</div><h1>Knowledge base</h1><p>Browse the indexed enterprise corpus and open documents at their source page.</p></div><button className="primary-action" onClick={onAdd}><Plus size={16} /> Add document</button>
-      <div className="select-wrap"><select value={department} onChange={(e) => setDepartment(e.target.value)}><option value="">All departments</option>{departments.slice(1).map((d) => <option key={d.name} value={d.name}>{d.label}</option>)}</select><CaretDown size={14} /></div>
+    <div className="page-heading-row"><div><div className="eyebrow"><Stack size={14} /> Evidence repository</div><h1>Knowledge base</h1><p>Browse the indexed enterprise corpus and open documents at their source page.</p></div>
+      <div className="knowledge-heading-tools"><span className="knowledge-count">{filtered.length} indexed</span><div className="select-wrap"><select value={department} onChange={(e) => setDepartment(e.target.value)}><option value="">All departments</option>{departments.slice(1).map((d) => <option key={d.name} value={d.name}>{d.label}</option>)}</select><CaretDown size={14} /></div></div>
     </div>
     <div className="knowledge-summary"><MetricCard icon={FileText} label="Indexed documents" value={docs.length} detail="Source-of-truth corpus" /><MetricCard icon={Database} label="Departments" value={new Set(docs.map((d) => d.department)).size} detail="Governed routing scopes" /><MetricCard icon={ShieldCheck} label="Provenance" value="PAGE" detail="Page-level source metadata" /></div>
     <section className="document-grid">{filtered.map((doc) => <MagicCard className="document-card" key={doc.document_id}>
