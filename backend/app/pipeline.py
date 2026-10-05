@@ -77,7 +77,7 @@ class Orchestrator:
                 new_source_id = max((e.source_id for e in evidence), default=0) + 1
                 evidence.append(Evidence(new_source_id, stat_chunk, 1.0))
                 stat["source_id"] = new_source_id
-                stat["text"] = re.sub(r"\[-1\]$", f"[{new_source_id}]", stat["text"])
+                stat["text"] = re.sub(r"\[-1\](?=\.)", f"[{new_source_id}]", stat["text"])
             elif stat.get("source_id", -1) < 0:
                 stat["source_id"] = evidence[-1].source_id
             stat_result = nx.CalcResult(
