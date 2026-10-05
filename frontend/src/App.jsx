@@ -1,25 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowUp,
-  BookOpenText,
-  CaretDown,
-  CheckCircle,
-  CircleNotch,
-  FileArrowUp,
-  FileText,
-  Funnel,
-  LinkSimple,
-  MagnifyingGlass,
-  Paperclip,
-  Plus,
-  ShieldCheck,
-  Sparkle,
-  X,
+  ArrowUp, BookOpenText, CaretDown, ChartLineUp, CheckCircle, CircleNotch,
+  Cpu, Database, FileText, Funnel, Gauge, GearSix, Graph, House, LinkSimple,
+  MagnifyingGlass, Plus, Pulse, ShieldCheck, Sparkle, Stack, X
 } from "@phosphor-icons/react";
 import { ChanakyaOrb } from "./components/ChanakyaOrb";
 import { MagicCard } from "./components/MagicCard";
+import { ProjectScene } from "./components/ProjectScene";
+import { DocumentViewer } from "./components/DocumentViewer";
 
 const API = import.meta.env.VITE_API_URL || "";
+
+const departments = [
+  { name: "", label: "All departments" },
+  { name: "finance", label: "Finance" },
+  { name: "hr", label: "Human Resources" },
+  { name: "manufacturing", label: "Manufacturing" },
+  { name: "customer_support", label: "Customer Support" },
+];
 
 const suggestions = [
   "What was revenue in FY2025 and how much did it grow from FY2024?",
@@ -30,51 +28,58 @@ const suggestions = [
   "Calculate the percentage increase in EBITDA between FY2024 and FY2025.",
 ];
 
-const departmentMeta = {
-  "": { label: "All departments", tone: "neutral" },
-  finance: { label: "Finance", tone: "finance" },
-  hr: { label: "Human Resources", tone: "hr" },
-  manufacturing: { label: "Manufacturing", tone: "manufacturing" },
-  customer_support: { label: "Customer Support", tone: "support" },
-};
-
-function escapeForText(value) {
-  return String(value ?? "");
-}
+const navItems = [
+  { id: "home", label: "Overview", icon: House },
+  { id: "workspace", label: "Ask CHANAKYA", icon: Sparkle },
+  { id: "knowledge", label: "Knowledge", icon: Stack },
+  { id: "analytics", label: "Analytics", icon: ChartLineUp },
+];
 
 function App() {
-  const [departments, setDepartments] = useState([]);
+  const [activeTab, setActiveTab] = useState("home");
   const [department, setDepartment] = useState("");
+  const [health, setHealth] = useState(null);
+  const [docs, setDocs] = useState([]);
+  const [evaluation, setEvaluation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
-  const [health, setHealth] = useState(null);
   const [source, setSource] = useState(null);
   const [sourceLoading, setSourceLoading] = useState(false);
-  const [documentUrl, setDocumentUrl] = useState("");
+  const [viewer, setViewer] = useState(null);
   const [error, setError] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
   const inputRef = useRef(null);
   const logRef = useRef(null);
 
+  const refreshSystem = async () => {
+    try {
+      const [h, d, e] = await Promise.all([
+        fetch(API + "/health").then((r) => r.json()),
+        fetch(API + "/documents").then((r) => r.json()),
+        fetch(API + "/evaluation/summary").then((r) => r.ok ? r.json() : null),
+      ]);
+      setHealth(h);
+      setDocs(Array.isArray(d) ? d : []);
+      setEvaluation(e);
+      setError("");
+    } catch {
+      setError("CHANAKYA API is not reachable. Keep the backend running on port 8000.");
+    }
+  };
+
   useEffect(() => {
-    Promise.all([
-      fetch(`${API}/departments`).then((r) => r.json()),
-      fetch(`${API}/health`).then((r) => r.json()),
-    ])
-      .then(([ds, h]) => {
-        setDepartments(ds);
-        setHealth(h);
-      })
-      .catch(() => setError("Could not reach the CHANAKYA backend. Make sure port 8000 is running."));
+    refreshSystem();
+    const timer = setInterval(refreshSystem, 15000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
-  const departmentLabel = useMemo(
-    () => departmentMeta[department]?.label || "All departments",
+  const selectedDepartment = useMemo(
+    () => (departments.find((item) => item.name === department) || departments[0]).label,
     [department]
   );
 
@@ -82,35 +87,29 @@ function App() {
     const q = (preset ?? question).trim();
     if (!q || loading) return;
 
+    setActiveTab("workspace");
     setQuestion("");
     setError("");
     setShowSuggestions(false);
-    setMessages((current) => [...current, { role: "user", content: q }]);
+    const assistantIndex = messages.length + 1;
+    setMessages((current) => [
+      ...current,
+      { role: "user", content: q },
+      { role: "assistant", content: "", streaming: true },
+    ]);
     setLoading(true);
 
-    const assistantIndex = messages.length + 1;
-    setMessages((current) => [...current, {
-      role: "assistant",
-      content: "",
-      streaming: true,
-      id: assistantIndex,
-    }]);
-
     try {
-      const response = await fetch(`${API}/query/stream`, {
+      const response = await fetch(API + "/query/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: q,
-          department: department || null,
-        }),
+        body: JSON.stringify({ question: q, department: department || null }),
       });
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        throw new Error(payload?.error?.message || `Request failed (${response.status})`);
+        throw new Error(payload?.error?.message || "Request failed (" + response.status + ")");
       }
-
       if (!response.body) throw new Error("Streaming is not available in this browser.");
 
       const reader = response.body.getReader();
@@ -124,60 +123,40 @@ function App() {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        while (buffer.includes("\n\n")) {
-          const index = buffer.indexOf("\n\n");
+        while (buffer.includes("\\n\\n")) {
+          const index = buffer.indexOf("\\n\\n");
           const event = buffer.slice(0, index);
           buffer = buffer.slice(index + 2);
-          const type = event.match(/event: (\w+)/)?.[1];
+          const type = event.match(/event: (\\w+)/)?.[1];
           const data = event.match(/data: (.*)/s)?.[1];
           if (!type || data == null) continue;
           const parsed = JSON.parse(data);
 
           if (type === "token") {
             answer += parsed;
-            setMessages((current) =>
-              current.map((message, i) =>
-                i === assistantIndex
-                  ? { ...message, content: answer }
-                  : message
-              )
-            );
+            setMessages((current) => current.map((message, i) =>
+              i === assistantIndex ? { ...message, content: answer } : message
+            ));
           }
-
-          if (type === "done") {
-            finalResult = parsed;
-          }
+          if (type === "done") finalResult = parsed;
         }
       }
 
-      setMessages((current) =>
-        current.map((message, i) =>
-          i === assistantIndex
-            ? {
-                ...message,
-                content: finalResult?.answer || answer,
-                result: finalResult,
-                streaming: false,
-              }
-            : message
-        )
-      );
+      setMessages((current) => current.map((message, i) =>
+        i === assistantIndex
+          ? { ...message, content: finalResult?.answer || answer, result: finalResult, streaming: false }
+          : message
+      ));
     } catch (err) {
-      setMessages((current) =>
-        current.map((message, i) =>
-          i === assistantIndex
-            ? {
-                ...message,
-                content: "I couldn't complete that request.",
-                streaming: false,
-                error: err.message,
-              }
-            : message
-        )
-      );
+      setMessages((current) => current.map((message, i) =>
+        i === assistantIndex
+          ? { ...message, content: "I couldn't complete that request.", streaming: false, error: err.message }
+          : message
+      ));
     } finally {
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 40);
+      refreshSystem();
     }
   };
 
@@ -186,15 +165,12 @@ function App() {
     setSourceLoading(true);
     setSource(null);
     try {
-      const response = await fetch(`${API}/sources/${item.chunk_id}`);
+      const response = await fetch(API + "/sources/" + item.chunk_id);
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message || "Source unavailable");
-      setSource(payload);
-      const page = payload.page_start || 1;
-      setDocumentUrl(payload.document_id ? `${API}/documents/${payload.document_id}/file#page=${page}` : "");
+      setSource({ ...payload, document: payload.document_name || item.document || "Retrieved source" });
     } catch (err) {
       setSource({ error: err.message });
-      setDocumentUrl("");
     } finally {
       setSourceLoading(false);
     }
@@ -203,326 +179,276 @@ function App() {
   const newConversation = () => {
     setMessages([]);
     setShowSuggestions(true);
+    setActiveTab("workspace");
     setError("");
-    inputRef.current?.focus();
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
+
+  const openDocument = (doc, page) => setViewer({ doc, page: page || 1 });
 
   return (
     <div className="app-shell">
-      <div className="paper-grid" aria-hidden="true" />
+      <div className="ambient-grid" aria-hidden="true" />
 
       <header className="topbar">
-        <div className="topbar__brand">
-          <div className="brand-mark"><Sparkle weight="fill" size={14} /></div>
+        <button className="brand-lockup" onClick={() => setActiveTab("home")} aria-label="CHANAKYA overview">
+          <div className="brand-mark"><Sparkle weight="fill" size={15} /></div>
           <div>
             <div className="brand-name">CHANAKYA</div>
-            <div className="brand-kicker">Enterprise intelligence</div>
+            <div className="brand-kicker">Enterprise intelligence platform</div>
           </div>
-        </div>
-
-        <div className="topbar__status">
-          <span className={`status-dot ${health?.status === "ok" ? "is-online" : ""}`} />
-          <span>{health?.status === "ok" ? "Knowledge online" : "Connecting"}</span>
-          <span className="topbar__divider" />
-          <span>{health?.documents ?? "—"} documents</span>
-          <span className="topbar__divider" />
-          <span>{health?.chunks ?? "—"} chunks</span>
-        </div>
-
-        <button className="new-chat-button" onClick={newConversation}>
-          <Plus size={17} weight="bold" />
-          <span>New chat</span>
         </button>
+
+        <nav className="primary-nav" aria-label="Primary navigation">
+          {navItems.map(({ id, label, icon: Icon }) => (
+            <button key={id} className={activeTab === id ? "nav-item is-active" : "nav-item"} onClick={() => setActiveTab(id)}>
+              <Icon size={15} weight={activeTab === id ? "fill" : "regular"} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="topbar-actions">
+          <div className="system-pill">
+            <span className={"status-dot " + (health?.status === "ok" ? "is-online" : "")} />
+            {health?.status === "ok" ? "Operational" : "Connecting"}
+          </div>
+          <button className="new-chat-button" onClick={newConversation}>
+            <Plus size={17} weight="bold" /><span>New chat</span>
+          </button>
+        </div>
       </header>
 
-      <main className="workspace">
-        <section className="hero-row">
-          <div className="hero-copy">
-            <div className="eyebrow"><ShieldCheck size={15} weight="bold" /> Evidence-first enterprise knowledge</div>
-            <h1>Ask the business.<br /><span>Get the evidence.</span></h1>
-            <p>
-              One governed conversation across Finance, HR, Manufacturing and Customer Support.
-              CHANAKYA routes the question, retrieves the right context and shows you exactly where it came from.
-            </p>
-            <div className="hero-meta">
-              <span><CheckCircle size={15} weight="fill" /> Grounded answers</span>
-              <span><CheckCircle size={15} weight="fill" /> Numerical reasoning</span>
-              <span><CheckCircle size={15} weight="fill" /> Source-linked context</span>
-            </div>
-          </div>
+      <main className="main-stage">
+        {activeTab === "home" && (
+          <HomeView health={health} docs={docs} evaluation={evaluation}
+            onAsk={(q) => { setActiveTab("workspace"); ask(q); }}
+            onKnowledge={() => setActiveTab("knowledge")} />
+        )}
 
-          <div className="hero-orb-wrap">
-            <ChanakyaOrb />
-            <div className="orb-caption">
-              <span>CHANAKYA</span>
-              <small>Wisdom layer active</small>
-            </div>
-          </div>
-        </section>
+        {activeTab === "workspace" && (
+          <WorkspaceView department={department} setDepartment={setDepartment}
+            selectedDepartment={selectedDepartment} messages={messages} question={question}
+            setQuestion={setQuestion} loading={loading} showSuggestions={showSuggestions}
+            inputRef={inputRef} logRef={logRef} ask={ask} onSource={openSource} health={health} />
+        )}
 
-        <section className="chat-shell">
-          <div className="chat-toolbar">
-            <div className="toolbar-left">
-              <div className="toolbar-label"><Funnel size={15} /> Route</div>
-              <div className="select-wrap">
-                <select value={department} onChange={(event) => setDepartment(event.target.value)} aria-label="Department">
-                  <option value="">All departments</option>
-                  {departments.map((item) => (
-                    <option key={item.name} value={item.name}>{item.label}</option>
-                  ))}
-                </select>
-                <CaretDown size={14} />
-              </div>
-            </div>
-            <div className="toolbar-note">
-              <span className="live-pip" />
-              {departmentLabel} · {health?.llm === "groq" ? "Groq reasoning" : "Offline verified mode"}
-            </div>
-          </div>
+        {activeTab === "knowledge" && (
+          <KnowledgeView docs={docs} department={department} setDepartment={setDepartment} onOpen={openDocument} />
+        )}
 
-          <div className="chat-log" ref={logRef}>
-            {messages.length === 0 && (
-              <div className="empty-chat">
-                <MagicCard className="welcome-card">
-                  <div className="welcome-card__inner">
-                    <div className="welcome-icon"><BookOpenText size={22} weight="duotone" /></div>
-                    <div>
-                      <div className="welcome-title">What should CHANAKYA investigate?</div>
-                      <div className="welcome-copy">
-                        Ask naturally. Department routing is automatic, and retrieved evidence stays attached to the answer.
-                      </div>
-                    </div>
-                  </div>
-                </MagicCard>
-
-                {showSuggestions && (
-                  <div className="suggestion-grid">
-                    {suggestions.map((item, index) => (
-                      <button
-                        key={item}
-                        className="suggestion"
-                        onClick={() => ask(item)}
-                        style={{ "--delay": `${index * 35}ms` }}
-                      >
-                        <span>{item}</span>
-                        <ArrowUp size={15} />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {messages.map((message, index) => (
-              <Message
-                key={message.id ?? index}
-                message={message}
-                onSource={openSource}
-              />
-            ))}
-
-            {loading && (
-              <div className="message-row assistant-row">
-                <div className="assistant-avatar"><Sparkle size={14} weight="fill" /></div>
-                <div className="typing-card" aria-label="CHANAKYA is thinking">
-                  <span /><span /><span />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <form
-            className="composer"
-            onSubmit={(event) => {
-              event.preventDefault();
-              ask();
-            }}
-          >
-            <div className="composer__icon"><MagnifyingGlass size={19} /></div>
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  ask();
-                }
-              }}
-              placeholder="Ask CHANAKYA anything about the enterprise..."
-              maxLength={1000}
-              aria-label="Ask CHANAKYA"
-            />
-            <div className="composer__actions">
-              <button type="button" className="icon-button" title="Upload documents is available in the backend" disabled>
-                <Paperclip size={18} />
-              </button>
-              <button className="send-button" disabled={!question.trim() || loading} aria-label="Send">
-                <ArrowUp size={19} weight="bold" />
-              </button>
-            </div>
-          </form>
-
-          <div className="composer-foot">
-            <span>Enter to send · Shift + Enter for a new line</span>
-            <span>Responses are grounded against the indexed knowledge base</span>
-          </div>
-        </section>
+        {activeTab === "analytics" && <AnalyticsView health={health} docs={docs} evaluation={evaluation} />}
 
         {error && <div className="global-error"><X size={16} /> {error}</div>}
       </main>
 
       {source && (
-        <SourceDrawer source={source} loading={sourceLoading} onClose={() => { setSource(null); setDocumentUrl(""); }} />
+        <SourceDrawer source={source} loading={sourceLoading} onClose={() => setSource(null)}
+          onOpenDocument={() => {
+            const doc = docs.find((item) => item.document_id === source.document_id);
+            if (doc) setViewer({ doc, page: source.page_start || 1 });
+          }} />
       )}
+
+      {viewer && <DocumentViewer document={viewer.doc} page={viewer.page} onClose={() => setViewer(null)} />}
+    </div>
+  );
+}
+
+function HomeView({ health, docs, evaluation, onAsk, onKnowledge }) {
+  const departmentCounts = useMemo(() => {
+    const counts = {};
+    docs.forEach((doc) => { counts[doc.department] = (counts[doc.department] || 0) + 1; });
+    return counts;
+  }, [docs]);
+
+  return (
+    <div className="page page-home">
+      <section className="hero-panel">
+        <div className="hero-copy">
+          <div className="eyebrow"><ShieldCheck size={15} weight="bold" /> Governed enterprise intelligence</div>
+          <h1>Ask the business.<br /><span>See the evidence.</span></h1>
+          <p>CHANAKYA is an agentic enterprise knowledge layer for Finance, HR, Manufacturing and Customer Support. It routes questions, retrieves evidence, reasons over structured data and validates citations before answering.</p>
+          <div className="hero-actions">
+            <button className="primary-action" onClick={() => onAsk("What is the most important insight in the enterprise knowledge base?")}><Sparkle size={16} weight="fill" /> Start a governed query</button>
+            <button className="secondary-action" onClick={onKnowledge}><Stack size={16} /> Explore knowledge</button>
+          </div>
+          <div className="trust-row"><span><CheckCircle weight="fill" /> Evidence grounded</span><span><CheckCircle weight="fill" /> Numerical reasoning</span><span><CheckCircle weight="fill" /> Citation validation</span></div>
+        </div>
+        <div className="hero-visual">
+          <div className="hero-visual-label">WISDOM LAYER / ACTIVE</div>
+          <ChanakyaOrb />
+          <div className="orb-caption"><b>CHANAKYA</b><span>Knowledge → reasoning → evidence</span></div>
+        </div>
+      </section>
+
+      <section className="metric-grid">
+        <MetricCard icon={Database} label="Knowledge base" value={health?.documents ?? docs.length} suffix=" docs" detail={(health?.chunks ?? "—") + " indexed chunks"} />
+        <MetricCard icon={Pulse} label="Runtime" value={health?.status === "ok" ? "ONLINE" : "SYNC"} detail={health?.llm === "groq" ? "Groq reasoning enabled" : "Offline verified mode"} />
+        <MetricCard icon={ShieldCheck} label="Governance" value={health?.auth === "none" ? "LOCAL" : "TOKEN"} detail={(health?.storage || "local") + " persistence"} />
+        <MetricCard icon={Gauge} label="Evaluation" value={evaluation?.accuracy != null ? Math.round(evaluation.accuracy * 100) + "%" : "READY"} detail={evaluation ? "Latest benchmark summary" : "Run evaluation to populate"} />
+      </section>
+
+      <section className="home-grid">
+        <MagicCard className="architecture-card">
+          <div className="section-head"><div><span className="micro-label">SYSTEM MAP</span><h2>From question to evidence</h2></div><span className="live-badge"><span /> live architecture</span></div>
+          <ProjectScene />
+        </MagicCard>
+
+        <MagicCard className="project-card">
+          <div className="section-head"><div><span className="micro-label">PROJECT PROFILE</span><h2>What CHANAKYA is built on</h2></div></div>
+          <div className="stack-list">
+            <TechRow icon={Cpu} name="Python backend" meta="stdlib HTTP API · orchestration" />
+            <TechRow icon={Graph} name="Hybrid retrieval" meta="dense + keyword + fusion" />
+            <TechRow icon={Database} name="Local / Supabase" meta="documents, chunks and provenance" />
+            <TechRow icon={Sparkle} name="Groq + GPT-OSS" meta="optional grounded generation" />
+            <TechRow icon={Stack} name="React + Vite" meta="responsive product interface" />
+          </div>
+          <div className="department-strip">
+            {Object.entries(departmentCounts).map(([key, value]) => <div key={key}><span>{key.replace("_", " ")}</span><b>{value}</b></div>)}
+          </div>
+        </MagicCard>
+      </section>
+
+      <section className="capability-row">
+        {[
+          ["01", "Route", "Classifies the question and applies department scope."],
+          ["02", "Retrieve", "Combines semantic and lexical evidence with rank fusion."],
+          ["03", "Reason", "Handles tables, comparisons and numerical calculations."],
+          ["04", "Validate", "Checks citations, numbers and evidence coverage."],
+        ].map(([number, title, copy]) => (
+          <MagicCard className="capability-card" key={number}><span className="capability-number">{number}</span><h3>{title}</h3><p>{copy}</p></MagicCard>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+function WorkspaceView({ department, setDepartment, selectedDepartment, messages, question, setQuestion, loading, showSuggestions, inputRef, logRef, ask, onSource, health }) {
+  return (
+    <div className="page page-workspace">
+      <div className="workspace-header">
+        <div><div className="eyebrow"><Sparkle size={14} weight="fill" /> Governed query workspace</div><h1>Ask CHANAKYA</h1><p>One conversation across the enterprise. Every grounded answer keeps its evidence attached.</p></div>
+        <div className="workspace-side-stat"><ChanakyaOrb compact /><div><b>Evidence mode</b><span>{health?.llm === "groq" ? "LLM + validator" : "Deterministic verified"}</span></div></div>
+      </div>
+
+      <section className="workspace-shell">
+        <div className="chat-toolbar">
+          <div className="toolbar-left"><div className="toolbar-label"><Funnel size={15} /> Route</div>
+            <div className="select-wrap"><select value={department} onChange={(event) => setDepartment(event.target.value)} aria-label="Department">
+              {departments.map((item) => <option key={item.name} value={item.name}>{item.label}</option>)}
+            </select><CaretDown size={14} /></div>
+          </div>
+          <div className="toolbar-note"><span className="live-pip" /> {selectedDepartment} · {health?.documents ?? "—"} sources indexed</div>
+        </div>
+
+        <div className="chat-log" ref={logRef}>
+          {messages.length === 0 && <div className="empty-chat">
+            <MagicCard className="welcome-card"><div className="welcome-card__inner"><div className="welcome-icon"><BookOpenText size={22} weight="duotone" /></div><div><div className="welcome-title">What should CHANAKYA investigate?</div><div className="welcome-copy">Ask naturally. Routing is automatic, and retrieved evidence stays attached to the answer.</div></div></div></MagicCard>
+            {showSuggestions && <div className="suggestion-grid">{suggestions.map((item, index) => <button key={item} className="suggestion" onClick={() => ask(item)} style={{ "--delay": (index * 35) + "ms" }}><span>{item}</span><ArrowUp size={15} /></button>)}</div>}
+          </div>}
+
+          {messages.map((message, index) => <Message key={message.id ?? index} message={message} onSource={onSource} />)}
+          {loading && <div className="message-row assistant-row"><div className="assistant-avatar"><Sparkle size={14} weight="fill" /></div><div className="typing-card"><span /><span /><span /></div></div>}
+        </div>
+
+        <form className="composer" onSubmit={(event) => { event.preventDefault(); ask(); }}>
+          <div className="composer__icon"><MagnifyingGlass size={19} /></div>
+          <textarea ref={inputRef} rows={1} value={question} onChange={(event) => setQuestion(event.target.value)}
+            onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); ask(); } }}
+            placeholder="Ask about revenue, policies, production, SLAs, people or performance..." maxLength={1000} aria-label="Ask CHANAKYA" />
+          <button className="send-button" disabled={!question.trim() || loading}><ArrowUp size={19} weight="bold" /></button>
+        </form>
+        <div className="composer-foot"><span>Enter to send · Shift + Enter for a new line</span><span>Answers are validated against indexed evidence</span></div>
+      </section>
     </div>
   );
 }
 
 function Message({ message, onSource }) {
-  if (message.role === "user") {
-    return (
-      <div className="message-row user-row">
-        <div className="user-message">{message.content}</div>
-      </div>
-    );
-  }
-
+  if (message.role === "user") return <div className="message-row user-row"><div className="user-message">{message.content}</div></div>;
   const result = message.result;
-  return (
-    <div className="message-row assistant-row">
-      <div className="assistant-avatar"><Sparkle size={14} weight="fill" /></div>
-      <div className="assistant-message-wrap">
-        <div className="assistant-label">CHANAKYA</div>
-        <MagicCard className="answer-card">
-          <div className="answer-card__body">
-            {message.content ? (
-              <div className="answer-copy">{message.content}</div>
-            ) : (
-              <div className="answer-skeleton"><span /><span /><span /></div>
-            )}
-
-            {message.error && <div className="inline-error">{message.error}</div>}
-
-            {result && !message.streaming && (
-              <>
-                <div className="answer-status">
-                  <span className={result.grounded ? "grounded" : "warning"}>
-                    {result.grounded ? <CheckCircle size={14} weight="fill" /> : <ShieldCheck size={14} />}
-                    {result.grounded ? "Grounded" : "Review sources"}
-                  </span>
-                  <span>{result.mode === "llm" ? "LLM verified" : "Evidence mode"}</span>
-                  {result.latency_ms ? <span>{result.latency_ms} ms</span> : null}
-                </div>
-
-                {result.calculations?.length > 0 && (
-                  <div className="calculation-strip">
-                    <div className="mini-label">Calculation</div>
-                    {result.calculations.map((item, i) => <div key={i}>{item}</div>)}
-                  </div>
-                )}
-
-                {result.sources?.length > 0 && (
-                  <div className="sources-block">
-                    <div className="section-heading"><span>Retrieved context</span><small>Click a source to inspect the exact chunk</small></div>
-                    <div className="source-list">
-                      {result.sources.map((item) => (
-                        <button
-                          key={item.source_id}
-                          className="source-chip"
-                          onClick={() => onSource(item)}
-                          disabled={!item.chunk_id}
-                          title={item.chunk_id ? "Open exact retrieved context" : "Source metadata unavailable"}
-                        >
-                          <FileText size={15} weight="duotone" />
-                          <span className="source-chip__text">
-                            <strong>[{item.source_id}] {item.document}</strong>
-                            <small>Page {item.page}{item.section ? ` · ${item.section}` : ""}</small>
-                          </span>
-                          <LinkSimple size={14} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {result.evidence?.length > 0 && (
-                  <details className="evidence-details">
-                    <summary>Evidence snippets <span>{result.evidence.length}</span></summary>
-                    <div className="evidence-stack">
-                      {result.evidence.map((item) => (
-                        <div className="evidence-item" key={item.source_id}>
-                          <div className="evidence-item__top">
-                            <span>[{item.source_id}] {item.document}</span>
-                            <span>p. {item.page}</span>
-                          </div>
-                          <p>{item.text}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                )}
-              </>
-            )}
+  return <div className="message-row assistant-row">
+    <div className="assistant-avatar"><Sparkle size={14} weight="fill" /></div>
+    <div className="assistant-message-wrap"><div className="assistant-label">CHANAKYA / VERIFIED RESPONSE</div>
+      <MagicCard className="answer-card"><div className="answer-card__body">
+        {message.content ? <div className="answer-copy">{message.content}</div> : <div className="answer-skeleton"><span /><span /><span /></div>}
+        {message.error && <div className="inline-error">{message.error}</div>}
+        {result && !message.streaming && <>
+          <div className="answer-status">
+            <span className={result.grounded ? "grounded" : "warning"}>{result.grounded ? <CheckCircle size={14} weight="fill" /> : <ShieldCheck size={14} />}{result.grounded ? "Grounded" : "Review sources"}</span>
+            <span>{result.mode === "llm" ? "LLM verified" : "Evidence mode"}</span>{result.latency_ms ? <span>{result.latency_ms} ms</span> : null}
           </div>
-        </MagicCard>
-      </div>
+          {result.calculations?.length > 0 && <div className="calculation-strip"><div className="mini-label">Calculation trail</div>{result.calculations.map((item, i) => <div key={i}>{item}</div>)}</div>}
+          {result.sources?.length > 0 && <div className="sources-block">
+            <div className="section-heading"><span>Retrieved context</span><small>Open any source for the exact indexed chunk</small></div>
+            <div className="source-list">{result.sources.map((item) => <button key={item.source_id} className="source-chip" onClick={() => onSource(item)} disabled={!item.chunk_id}>
+              <FileText size={15} weight="duotone" /><span className="source-chip__text"><strong>[{item.source_id}] {item.document}</strong><small>Page {item.page}{item.section ? " · " + item.section : ""}</small></span><LinkSimple size={14} />
+            </button>)}</div>
+          </div>}
+        </>}
+      </div></MagicCard>
     </div>
-  );
+  </div>;
 }
 
-function SourceDrawer({ source, loading, onClose }) {
-  return (
-    <div className="source-overlay" role="presentation" onMouseDown={onClose}>
-      <aside className="source-drawer" role="dialog" aria-modal="true" aria-label="Retrieved source" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="source-drawer__header">
-          <div>
-            <div className="eyebrow"><LinkSimple size={14} /> Retrieved source</div>
-            <h2>{loading ? "Opening evidence…" : source.document || "Source"}</h2>
-          </div>
-          <button className="close-button" onClick={onClose} aria-label="Close source">
-            <X size={19} />
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="source-loading"><CircleNotch className="spin" size={22} /> Loading exact context</div>
-        ) : source.error ? (
-          <div className="inline-error">{source.error}</div>
-        ) : (
-          <div className="source-content">
-            <div className="source-meta-grid">
-              <div><span>Department</span><strong>{source.department}</strong></div>
-              <div><span>Page</span><strong>{source.page_start === source.page_end ? source.page_start : `${source.page_start}–${source.page_end}`}</strong></div>
-              <div><span>Section</span><strong>{source.section || "N/A"}</strong></div>
-              <div><span>Type</span><strong>{source.content_type}</strong></div>
-            </div>
-            <div className="source-actions">
-              {documentUrl && source.document?.toLowerCase().endsWith(".pdf") && (
-                <a className="document-link" href={documentUrl} target="_blank" rel="noreferrer">
-                  <BookOpenText size={16} />
-                  Open document at page {source.page_start}
-                </a>
-              )}
-              <button className="document-link document-link--secondary" onClick={onClose}>
-                <X size={15} />
-                Close source
-              </button>
-            </div>
-            <div className="source-highlight">
-              <div className="mini-label">Exact retrieved context</div>
-              <p>{source.text}</p>
-            </div>
-            <div className="source-note">
-              <BookOpenText size={17} />
-              This view is the exact indexed chunk used by CHANAKYA, preserving its document name, page and section provenance.
-            </div>
-          </div>
-        )}
-      </aside>
+function KnowledgeView({ docs, department, setDepartment, onOpen }) {
+  const filtered = docs.filter((doc) => !department || doc.department === department);
+  return <div className="page">
+    <div className="page-heading-row"><div><div className="eyebrow"><Stack size={14} /> Evidence repository</div><h1>Knowledge base</h1><p>Browse the indexed enterprise corpus and open documents at their source page.</p></div>
+      <div className="select-wrap"><select value={department} onChange={(e) => setDepartment(e.target.value)}><option value="">All departments</option>{departments.slice(1).map((d) => <option key={d.name} value={d.name}>{d.label}</option>)}</select><CaretDown size={14} /></div>
     </div>
-  );
+    <div className="knowledge-summary"><MetricCard icon={FileText} label="Indexed documents" value={docs.length} detail="Source-of-truth corpus" /><MetricCard icon={Database} label="Departments" value={new Set(docs.map((d) => d.department)).size} detail="Governed routing scopes" /><MetricCard icon={ShieldCheck} label="Provenance" value="PAGE" detail="Page-level source metadata" /></div>
+    <section className="document-grid">{filtered.map((doc) => <MagicCard className="document-card" key={doc.document_id}>
+      <div className="document-card-top"><span className="file-badge"><FileText size={17} /></span><span className="doc-type">{doc.content_type || "document"}</span></div>
+      <h3 title={doc.name}>{doc.name}</h3><div className="document-meta"><span>{doc.department.replace("_", " ")}</span><span>{doc.chunks ?? "—"} chunks</span></div>
+      <button className="document-open" onClick={() => onOpen(doc, 1)}><BookOpenText size={15} /> Inspect document</button>
+    </MagicCard>)}</section>
+    {filtered.length === 0 && <div className="empty-state">No documents match this department.</div>}
+  </div>;
+}
+
+function AnalyticsView({ health, docs, evaluation }) {
+  const byDept = docs.reduce((acc, doc) => { acc[doc.department] = (acc[doc.department] || 0) + 1; return acc; }, {});
+  const max = Math.max(1, ...Object.values(byDept));
+  return <div className="page">
+    <div className="page-heading-row"><div><div className="eyebrow"><ChartLineUp size={14} /> Operational intelligence</div><h1>Analytics</h1><p>A control surface for knowledge coverage, runtime state and evaluation quality.</p></div><div className="system-pill"><span className="status-dot is-online" /> Auto-refresh 15s</div></div>
+    <div className="analytics-grid">
+      <MagicCard className="chart-card large"><div className="section-head"><div><span className="micro-label">CORPUS COVERAGE</span><h2>Documents by department</h2></div><Database size={18} /></div>
+        <div className="bar-chart">{Object.entries(byDept).map(([dept, count]) => <div className="bar-row" key={dept}><div className="bar-label">{dept.replace("_", " ")}</div><div className="bar-track"><div className="bar-fill" style={{ width: ((count / max) * 100) + "%" }} /></div><b>{count}</b></div>)}</div>
+      </MagicCard>
+      <MagicCard className="chart-card"><div className="section-head"><div><span className="micro-label">RUNTIME</span><h2>System posture</h2></div><GearSix size={18} /></div>
+        <div className="runtime-list"><RuntimeRow label="API" value={health?.status === "ok" ? "Healthy" : "Connecting"} ok={health?.status === "ok"} /><RuntimeRow label="LLM" value={health?.llm || "—"} ok /><RuntimeRow label="Storage" value={health?.storage || "—"} ok /><RuntimeRow label="Embedding" value={health?.embedding || "—"} ok /><RuntimeRow label="Documents" value={health?.documents ?? docs.length} ok /><RuntimeRow label="Chunks" value={health?.chunks ?? "—"} ok /></div>
+      </MagicCard>
+      <MagicCard className="chart-card"><div className="section-head"><div><span className="micro-label">EVALUATION</span><h2>Quality gate</h2></div><Gauge size={18} /></div>
+        {evaluation ? <div className="score-ring"><div><strong>{Math.round((evaluation.accuracy ?? 0) * 100)}%</strong><span>accuracy</span></div></div> : <div className="not-ready"><Gauge size={28} /><b>No benchmark snapshot</b><span>Run the evaluation suite to populate this panel.</span></div>}
+      </MagicCard>
+      <MagicCard className="chart-card"><div className="section-head"><div><span className="micro-label">ARCHITECTURE</span><h2>Pipeline health</h2></div><Graph size={18} /></div>
+        <div className="pipeline-mini">{["Route", "Retrieve", "Reason", "Validate"].map((item, i) => <div key={item}><span>{i + 1}</span><b>{item}</b><small>{i === 0 ? "query scope" : i === 1 ? "hybrid evidence" : i === 2 ? "tables + numerics" : "citations"}</small></div>)}</div>
+      </MagicCard>
+    </div>
+  </div>;
+}
+
+function MetricCard({ icon: Icon, label, value, suffix = "", detail }) {
+  return <MagicCard className="metric-card"><div className="metric-icon"><Icon size={18} /></div><div><span>{label}</span><strong>{value}{suffix}</strong><small>{detail}</small></div></MagicCard>;
+}
+function TechRow({ icon: Icon, name, meta }) { return <div className="tech-row"><div className="tech-icon"><Icon size={17} /></div><div><b>{name}</b><span>{meta}</span></div></div>; }
+function RuntimeRow({ label, value, ok }) { return <div className="runtime-row"><span>{label}</span><b>{value}</b><i className={ok ? "ok" : ""} /></div>; }
+
+function SourceDrawer({ source, loading, onClose, onOpenDocument }) {
+  return <div className="source-overlay" role="presentation" onMouseDown={onClose}>
+    <aside className="source-drawer" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
+      <div className="source-drawer__header"><div><div className="eyebrow"><LinkSimple size={14} /> Retrieved evidence</div><h2>{loading ? "Opening evidence…" : source.document || "Source"}</h2></div><button className="close-button" onClick={onClose}><X size={19} /></button></div>
+      {loading ? <div className="source-loading"><CircleNotch className="spin" size={22} /> Loading exact context</div> : source.error ? <div className="inline-error">{source.error}</div> :
+        <div className="source-content">
+          <div className="source-meta-grid"><div><span>Department</span><strong>{source.department}</strong></div><div><span>Page</span><strong>{source.page_start === source.page_end ? source.page_start : source.page_start + "–" + source.page_end}</strong></div><div><span>Section</span><strong>{source.section || "N/A"}</strong></div><div><span>Type</span><strong>{source.content_type}</strong></div></div>
+          <div className="source-actions"><button className="document-link" onClick={onOpenDocument}><BookOpenText size={16} /> Open source at page {source.page_start || 1}</button><button className="document-link document-link--secondary" onClick={onClose}><X size={15} /> Close</button></div>
+          <div className="source-highlight"><div className="micro-label">EXACT INDEXED CHUNK</div><p>{source.text}</p></div>
+          <div className="source-note"><ShieldCheck size={15} /> This is the exact chunk CHANAKYA retrieved for the answer. Page navigation is preserved in the document viewer.</div>
+        </div>}
+    </aside>
+  </div>;
 }
 
 export default App;
