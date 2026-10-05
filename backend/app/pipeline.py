@@ -77,7 +77,7 @@ class Orchestrator:
                 new_source_id = max((e.source_id for e in evidence), default=0) + 1
                 evidence.append(Evidence(new_source_id, stat_chunk, 1.0))
                 stat["source_id"] = new_source_id
-                stat["text"] = re.sub(r"\[-?1\]$", f"[{new_source_id}]", stat["text"])
+                stat["text"] = re.sub(r"\[-1\]$", f"[{new_source_id}]", stat["text"])
             elif stat.get("source_id", -1) < 0:
                 stat["source_id"] = evidence[-1].source_id
             stat_result = nx.CalcResult(
@@ -88,7 +88,9 @@ class Orchestrator:
             )
             calcs.append(Calc(stat["kind"], stat_result, stat["text"]))
             facts_text.append(stat["text"])
-            offline_body = stat["text"] + (f" {offline_body}" if offline_body else "")
+            # A verified descriptive statistic is authoritative. Do not mix
+            # unrelated row-level facts from the generic numerical agent into it.
+            offline_body = stat["text"]
         calc_lines = [c.text for c in calcs]
         calc_vals = [v for c in calcs for v in (c.result.value, abs(c.result.value))]
         notice = ""
