@@ -274,6 +274,16 @@ function HomeView({ health, docs, evaluation, onAsk, onKnowledge }) {
   );
 }
 
+function renderAnswerText(text) {
+  const parts = String(text || "").split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    return <React.Fragment key={index}>{part}</React.Fragment>;
+  });
+}
+
 function WorkspaceView({ department, setDepartment, selectedDepartment, messages, question, setQuestion, loading, showSuggestions, inputRef, logRef, ask, onSource, onRefresh, health }) {
   return (
     <div className="page page-workspace">
@@ -342,7 +352,7 @@ function Message({ message, onSource }) {
     <div className="assistant-avatar"><Sparkle size={14} weight="fill" /></div>
     <div className="assistant-message-wrap"><div className="assistant-label">CHANAKYA / VERIFIED RESPONSE</div>
       <MagicCard className="answer-card"><div className="answer-card__body">
-        {message.content ? <div className="answer-copy">{message.content}</div> : <div className="answer-skeleton"><span /><span /><span /></div>}
+        {message.content ? <div className="answer-copy">{renderAnswerText(message.content)}</div> : <div className="answer-skeleton"><span /><span /><span /></div>}
         {message.error && <div className="inline-error">{message.error}</div>}
         {result && !message.streaming && <>
           <div className="answer-status">
