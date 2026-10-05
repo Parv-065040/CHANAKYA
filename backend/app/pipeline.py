@@ -85,16 +85,20 @@ class Orchestrator:
             try:
                 raw = self.llm.complete(q, build_context(evidence), "\n".join(calc_lines + facts_text))
                 rep = validate_answer(raw, evidence, calc_values=calc_vals, question=q)
-                if rep.ok:
+                llm_refused = raw.strip() == REFUSAL_MESSAGE or raw.strip().startswith(REFUSAL_MESSAGE)
+                if rep.ok and not llm_refused:
                     answer, mode = raw, "llm"
                 else:
-                    notice = "LLM answer failed grounding validation; showing verified evidence-based answer."
-                    log.warning("validation failed: %s", [i.code for i in rep.issues])
+                    notice = "LLM refused or failed grounding validation; showing verified evidence-based answer."
+                    log.warning("LLM answer rejected: refused=%s issues=%s", llm_refused, [i.code for i in rep.issues])
             except LLMUnavailable as exc:
                 notice = f"LLM unavailable ({exc}); showing evidence-based answer."
         else:
             notice = "Offline mode (no GROQ_API_KEY): deterministic evidence-based answer."
-        if not answer:
+        if stat:
+            answer = offline_body or stat["text"]
+            mode = "offline"
+        elif not answer:
             answer = offline_body or self._extractive(q, evidence)
         rep = validate_answer(answer, evidence, calc_values=calc_vals, question=q)
         sources = format_sources(evidence, rep.cited_sources or [e.source_id for e in evidence[:3]])
