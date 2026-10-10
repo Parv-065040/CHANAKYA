@@ -7,11 +7,18 @@ from decimal import Decimal
 
 from .core.keyword import QUERY_STOP, _stem, normalize_aliases, tokenize
 
-TABLE_STOP = frozenset(_stem(w) for w in "did does do had has have from much many than between compared about into could would should can will their there any when who whom were been being during year time give tell show list provide value number amount level current per please s".split())
+TABLE_STOP = frozenset(_stem(w) for w in "did does do had has have from much many than between compared about into could would should can will their there any when who whom were been being during year time give tell show list provide value number amount level current per please s average mean avg median standard deviation std dev variance total sum aggregate combined count number minimum min lowest smallest maximum max highest largest greatest".split())
 from .core.models import Evidence
 from .core import numerics as nx
 
 GROWTH = re.compile(r"\b(grew|grow|growth|increase[d]?|decrease[d]?|decline[d]?|change[d]?|percent(age)?|difference|compare[d]?|rise|rose|fell|higher|lower)\b", re.I)
+STAT_AVG = re.compile(r"\b(average|mean|avg)\b", re.I)
+STAT_MEDIAN = re.compile(r"\bmedian\b", re.I)
+STAT_STD = re.compile(r"\b(std(?:\.|andard)?\s*dev(?:iation)?|standard\s*deviation|variance)\b", re.I)
+STAT_SUM = re.compile(r"\b(total|sum|aggregate|combined)\b", re.I)
+STAT_COUNT = re.compile(r"\b(count|number of|how many)\b", re.I)
+STAT_MIN = re.compile(r"\b(minimum|min|lowest|smallest)\b", re.I)
+STAT_MAX = re.compile(r"\b(maximum|max|highest|largest|greatest)\b", re.I)
 SUPER_MAX = re.compile(r"\b(highest|largest|maximum|most|greatest|peak)\b", re.I)
 SUPER_MIN = re.compile(r"\b(lowest|smallest|minimum|least)\b", re.I)
 def norm(text: str) -> str:
@@ -40,6 +47,191 @@ class Fact:
     raw: str
     score: float
 
+
+
+def _chunk_table_rows(chunk) -> tuple[list[str], list[list[str]]]:
+    """Parse one stored table chunk into its repeated header and body rows."""
+    rows: list[list[str]] = []
+    for ln in chunk.text.splitlines():
+        ln = ln.strip()
+        if ln.startswith("|") and not set(ln) <= set("|- :"):
+            rows.append([c.strip() for c in ln.strip("|").split("|")])
+    if len(rows) < 2:
+        return [], []
+    return rows[0], rows[1:]
+
+
+def descriptive_statistics(query: str, evidence: list[Evidence], all_chunks) -> dict | None:
+    """Compute descriptive statistics over the complete logical table."""
+    if not (STAT_AVG.search(query) or STAT_MEDIAN.search(query) or
+            STAT_STD.search(query) or STAT_SUM.search(query) or
+            STAT_COUNT.search(query) or STAT_MIN.search(query) or STAT_MAX.search(query)):
+        return None
+
+    table_evidence = [ev for ev in evidence if ev.chunk.content_type == "table"]
+    if not table_evidence:
+        return None
+
+    raw_tokens = set(tokenize(norm(re.sub(r"\([^)]*\)", " ", query))))
+    stat_tokens = {
+        "average", "mean", "avg", "median", "standard", "deviation",
+        "std", "dev", "variance", "total", "sum", "aggregate", "combined",
+        "count", "number", "minimum", "min", "lowest", "smallest",
+        "maximum", "max", "highest", "largest", "greatest",
+    }
+    metric_tokens = raw_tokens - stat_tokens
+    if not metric_tokens:
+        return None
+
+    candidates: list[tuple[float, TableView, int, list[Decimal], int, str]] = []
+    logical_tables: dict[str, list] = {}
+    for x in all_chunks:
+        if x.content_type != "table":
+            continue
+        key = x.table_id or f"{x.document_id}:{x.section}:{x.document_name}"
+        logical_tables.setdefault(key, []).append(x)
+
+    evidence_by_table = {}
+    for ev in table_evidence:
+        key = ev.chunk.table_id or f"{ev.chunk.document_id}:{ev.chunk.section}:{ev.chunk.document_name}"
+        evidence_by_table.setdefault(key, []).append(ev)
+
+    for table_key, matching in logical_tables.items():
+        c = min(matching, key=lambda x: (x.page_start, x.chunk_id))
+        if not matching:
+            matching = [c]
+
+        header: list[str] = []
+        rows: list[list[str]] = []
+        seen_rows: set[tuple[str, ...]] = set()
+        for chunk in sorted(matching, key=lambda x: (x.page_start, x.chunk_id)):
+            h, body = _chunk_table_rows(chunk)
+            if h and not header:
+                header = h
+            for row in body:
+                key = tuple(row)
+                if key not in seen_rows:
+                    seen_rows.add(key)
+                    rows.append(row)
+
+        if not header or not rows:
+            continue
+
+        best_col: tuple[float, int] | None = None
+        for ci, h in enumerate(header[1:], start=1):
+            ht = set(qtokens(h))
+            if not ht:
+                continue
+            overlap = len(ht & metric_tokens)
+            score = (overlap / len(ht)) + 0.75 * (overlap / max(len(metric_tokens), 1))
+            if overlap and (best_col is None or score > best_col[0]):
+                best_col = (score, ci)
+
+        if best_col is None:
+            continue
+
+        ci = best_col[1]
+        values: list[Decimal] = []
+        for row in rows:
+            if ci >= len(row):
+                continue
+            try:
+                values.append(nx.parse_quantity(row[ci]).value)
+            except nx.NumericError:
+                continue
+
+        if values:
+            evs = evidence_by_table.get(table_key, [])
+            sid = evs[0].source_id if evs else -1
+            ev_score = evs[0].score if evs else 0.0
+            context_tokens = set(qtokens(c.document_name + " " + c.section + " " + " ".join(header)))
+            context_overlap = len(context_tokens & metric_tokens) / max(len(metric_tokens), 1)
+            total_score = best_col[0] + 0.6 * context_overlap + 0.15 * min(ev_score, 1.0)
+            tv = TableView(sid, c.document_name, header, rows, c.section)
+            candidates.append((total_score, tv, ci, values, sid, c.chunk_id))
+
+    if not candidates:
+        return None
+
+    _, tv, ci, values, sid, representative_chunk_id = max(
+        candidates, key=lambda x: (x[0], len(x[3]))
+    )
+    n = len(values)
+    total = sum(values, Decimal(0))
+    mean = total / n
+    ordered = sorted(values)
+    median = ordered[n // 2] if n % 2 else (ordered[n // 2 - 1] + ordered[n // 2]) / Decimal(2)
+    ss = sum((v - mean) ** 2 for v in values)
+    population_std = (ss / Decimal(n)).sqrt()
+    sample_std = (ss / Decimal(n - 1)).sqrt() if n > 1 else Decimal(0)
+
+    if STAT_STD.search(query):
+        if "variance" in query.lower() and not re.search(r"std|deviation", query, re.I):
+            result = ss / Decimal(n)
+            kind = "variance"
+        else:
+            result = sample_std
+            kind = "standard deviation"
+        return {
+            "metric": tv.header[ci], "n": n, "value": result, "unit": "",
+            "formula": f"{kind} over {n} values",
+            "text": f"{kind.title()} for {tv.header[ci]}: {nx.quantize(result, 4)} "
+                    f"(sample; population standard deviation = {nx.quantize(population_std, 4)}) "
+                    f"over {n} numeric values [{sid}].",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "std",
+        }
+
+    if STAT_AVG.search(query):
+        return {
+            "metric": tv.header[ci], "n": n, "value": mean, "unit": "",
+            "formula": f"{nx.quantize(total, 4)} / {n}",
+            "text": f"Average {tv.header[ci]}: {nx.quantize(mean, 4)} = {nx.quantize(total, 4)} / {n} [{sid}].",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "average",
+        }
+
+    if STAT_MEDIAN.search(query):
+        return {
+            "metric": tv.header[ci], "n": n, "value": median, "unit": "",
+            "formula": f"median of {n} sorted values",
+            "text": f"Median {tv.header[ci]}: {nx.quantize(median, 4)} over {n} numeric values [{sid}].",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "median",
+        }
+
+    if STAT_SUM.search(query):
+        return {
+            "metric": tv.header[ci], "n": n, "value": total, "unit": "",
+            "formula": f"sum of {n} values",
+            "text": f"Total {tv.header[ci]}: {nx.quantize(total, 4)} over {n} numeric values [{sid}].",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "sum",
+        }
+
+    if STAT_COUNT.search(query):
+        return {
+            "metric": tv.header[ci], "n": n, "value": Decimal(n), "unit": "",
+            "formula": f"count of {n} numeric values",
+            "text": f"Count of numeric {tv.header[ci]} values: {n} [{sid}].",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "count",
+        }
+
+    if STAT_MIN.search(query):
+        value = min(values)
+        return {
+            "metric": tv.header[ci], "n": n, "value": value, "unit": "",
+            "formula": f"minimum of {n} values",
+            "text": f"Minimum {tv.header[ci]}: {nx.quantize(value, 4)} [{sid}].",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "min",
+        }
+
+    if STAT_MAX.search(query):
+        value = max(values)
+        return {
+            "metric": tv.header[ci], "n": n, "value": value, "unit": "",
+            "formula": f"maximum of {n} values",
+            "text": f"Maximum {tv.header[ci]}: {nx.quantize(value, 4)} [{sid}].",
+            "source_id": sid, "chunk_id": representative_chunk_id, "kind": "max",
+        }
+
+    return None
 
 def parse_tables(evidence: list[Evidence]) -> list[TableView]:
     out: list[TableView] = []

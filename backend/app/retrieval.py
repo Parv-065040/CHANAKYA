@@ -165,28 +165,15 @@ class HybridRetriever:
         query: str,
         k: int,
         depts: set[str],
-    ) -> tuple[list[str], dict[str, Chunk]]:
-        vector_ids = self._cap(
-            [
-                cid
-                for cid, _ in self.kb.vector_search(
-                    query,
-                    len(self.kb.chunks),
-                    depts,
-                )
-            ],
-            k,
+    ) -> tuple[list[str], dict[str, Chunk], dict[str, float]]:
+        vector_ranked = self.kb.vector_search(
+            query, len(self.kb.chunks), depts
         )
+        vector_ids = self._cap([cid for cid, _ in vector_ranked], k)
+        semantic_scores = {cid: score for cid, score in vector_ranked if cid in vector_ids}
 
         keyword_ids = self._cap(
-            [
-                cid
-                for cid, _ in self.kb.keyword_search(
-                    query,
-                    len(self.kb.chunks),
-                    depts,
-                )
-            ],
+            [cid for cid, _ in self.kb.keyword_search(query, len(self.kb.chunks), depts)],
             k,
         )
 
@@ -195,53 +182,29 @@ class HybridRetriever:
             for cid in set(vector_ids + keyword_ids)
             if cid in self.kb.chunks
         }
-
-        return vector_ids, {cid: chunks[cid] for cid in chunks}
+        return vector_ids, {cid: chunks[cid] for cid in chunks}, semantic_scores
 
     def _retrieve_supabase_candidates(
         self,
         query: str,
         k: int,
         depts: set[str],
-    ) -> tuple[list[str], dict[str, Chunk]]:
+    ) -> tuple[list[str], dict[str, Chunk], dict[str, float]]:
         assert self.remote is not None
-
         remote_k = max(k * 3, 60)
 
-        vector = self.remote.vector_search(
-            query,
-            remote_k,
-            depts,
-        )
+        vector = self.remote.vector_search(query, remote_k, depts)
+        keyword = self.remote.keyword_search(query, remote_k, depts)
 
-        keyword = self.remote.keyword_search(
-            query,
-            remote_k,
-            depts,
-        )
-
-        vector_chunks = self._cap_chunks(
-            [x.chunk for x in vector],
-            remote_k,
-        )
-
-        keyword_chunks = self._cap_chunks(
-            [x.chunk for x in keyword],
-            remote_k,
-        )
+        vector_chunks = self._cap_chunks([x.chunk for x in vector], remote_k)
+        keyword_chunks = self._cap_chunks([x.chunk for x in keyword], remote_k)
 
         vector_ids = [c.chunk_id for c in vector_chunks]
         keyword_ids = [c.chunk_id for c in keyword_chunks]
+        chunks = {c.chunk_id: c for c in vector_chunks + keyword_chunks}
+        semantic_scores = {x.chunk.chunk_id: x.score for x in vector}
 
-        chunks = {
-            c.chunk_id: c
-            for c in vector_chunks + keyword_chunks
-        }
-
-        return vector_ids, {
-            cid: chunks[cid]
-            for cid in set(vector_ids + keyword_ids)
-        }
+        return vector_ids, {cid: chunks[cid] for cid in set(vector_ids + keyword_ids)}, semantic_scores
 
     def retrieve(
         self,
@@ -262,7 +225,7 @@ class HybridRetriever:
         k = plan.candidate_k
 
         if self.backend == "supabase":
-            vector_ids, chunk_map = self._retrieve_supabase_candidates(
+            vector_ids, chunk_map, semantic_scores = self._retrieve_supabase_candidates(
                 query,
                 k,
                 depts,
@@ -280,7 +243,7 @@ class HybridRetriever:
             )
             keyword_ids = [c.chunk_id for c in keyword_chunks]
         else:
-            vector_ids, chunk_map = self._retrieve_local_candidates(
+            vector_ids, chunk_map, semantic_scores = self._retrieve_local_candidates(
                 query,
                 k,
                 depts,
@@ -311,7 +274,15 @@ class HybridRetriever:
             if cid in chunk_map
         ]
 
-        scores = self.reranker.score(query, cands)
+        lexical_scores = self.reranker.score(query, cands)
+
+        # Preserve dense BGE-M3 relevance for natural-language questions.
+        # Previously, semantically relevant chunks could receive lexical score
+        # 0 and be discarded even though vector retrieval found them.
+        scores = []
+        for chunk, lexical in zip(cands, lexical_scores):
+            semantic = max(0.0, min(1.0, semantic_scores.get(chunk.chunk_id, 0.0)))
+            scores.append(0.65 * semantic + 0.35 * lexical)
 
         top_rrf = fused[0][1] if fused else 1.0
         fused_s = {
@@ -384,15 +355,14 @@ class HybridRetriever:
                 if not has_complete_chunk:
                     return []
 
-            if (
-                (
-                    cov(kept)
-                    if plan.needs_multi_retrieval
-                    else best_single
-                )
-                < self.min_coverage
-            ):
-                return []
+            # Broad factual/semantic questions do not need every query token
+            # to appear in one chunk. Keep the evidence gate strict for
+            # calculations and multi-source questions, but avoid false refusals
+            # for natural-language knowledge questions.
+            if plan.needs_numerics or plan.needs_multi_retrieval:
+                coverage = cov(kept)
+                if coverage < self.min_coverage:
+                    return []
 
         return kept
 

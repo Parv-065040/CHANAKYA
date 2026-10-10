@@ -53,9 +53,14 @@ def format_sources(evidence: Sequence[Evidence], cited: Sequence[int]) -> list[d
         c = ev.chunk
         out.append({
             "source_id": sid,
+            "chunk_id": c.chunk_id,
+            "document_id": c.document_id,
             "document": c.document_name,
             "page": c.page_start if c.page_start == c.page_end else f"{c.page_start}-{c.page_end}",
+            "page_start": c.page_start,
+            "page_end": c.page_end,
             "section": c.section,
             "department": c.department,
+            "content_type": c.content_type,
         })
     return out

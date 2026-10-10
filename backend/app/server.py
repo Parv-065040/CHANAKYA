@@ -16,7 +16,7 @@ from collections import defaultdict, deque
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 from .config import Settings
 from .core.router import DEFAULT_DEPARTMENTS
@@ -168,6 +168,61 @@ def make_handler(app: App) -> type[BaseHTTPRequestHandler]:
                         return
                     d = app.kb.docs.get(m.group(1))
                     return self._json(200, asdict(d)) if d else self._err(404, "not_found", "document not found")
+                m = re.fullmatch(r"/documents/([a-f0-9]+)/file", u.path)
+                if m:
+                    ident = self._who()
+                    if not ident:
+                        return
+                    doc = app.kb.docs.get(m.group(1))
+                    if not doc:
+                        return self._err(404, "not_found", "document not found")
+                    if ident[1] is not None and doc.department not in ident[1]:
+                        return self._err(403, "forbidden", "no access to department")
+                    ctype = {
+                        ".pdf": "application/pdf",
+                        ".csv": "text/csv; charset=utf-8",
+                        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    }.get(Path(doc.name).suffix.lower(), "application/octet-stream")
+                    if app.settings.storage_backend == "local":
+                        root = Path(app.settings.data_dir).resolve() / "files"
+                        matches = list(root.glob(f"{doc.document_id}_{doc.name}"))
+                        if not matches:
+                            return self._err(404, "not_found", "document file not found")
+                        path = matches[0].resolve()
+                        if root not in path.parents:
+                            return self._err(400, "invalid_path", "invalid document path")
+                        data = path.read_bytes()
+                    else:
+                        # Use the configured persistence instance directly. Avoid a strict
+                        # isinstance check here because module reloads/import paths can produce a
+                        # different class identity even when the backend is correctly configured.
+                        storage = app.kb.persist
+                        if not all(hasattr(storage, attr) for attr in ("_req", "bucket")):
+                            return self._err(500, "storage_error", "document storage is not configured correctly")
+                        object_path = f"{doc.document_id}_{doc.name}"
+                        try:
+                            # Proxy the private Storage object through the API. This is deliberately
+                            # server-side so the Supabase service-role key never reaches the browser.
+                            # The upload limit is small enough for this to be practical and it avoids
+                            # relying on Storage signed-URL response formats.
+                            stored = storage._req(
+                                "GET",
+                                f"/storage/v1/object/{storage.bucket}/{quote(object_path, safe='/')}",
+                            )
+                            data = stored.content
+                        except Exception as exc:
+                            log.exception("document storage read failed for %s (%s): %s", doc.document_id, object_path, exc)
+                            return self._err(404, "not_found", "document file is not available in document storage")
+                    self.send_response(200)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Content-Length", str(len(data)))
+                    self.send_header("Content-Disposition", f'inline; filename="{doc.name}"')
+                    self.send_header("Access-Control-Allow-Origin", app.settings.cors_origin)
+                    self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+                    self.send_header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
                 m = re.fullmatch(r"/sources/([a-f0-9]+)", u.path)
                 if m:
                     ident = self._who()

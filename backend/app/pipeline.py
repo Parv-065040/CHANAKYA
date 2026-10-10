@@ -66,6 +66,31 @@ class Orchestrator:
             return self._done(QueryResult(REFUSAL_MESSAGE, [], [], [], route, "refusal", True), t0)
 
         calcs, facts_text, offline_body = self._numerical_agent(q, evidence, plan.question_type)
+        stat = T.descriptive_statistics(q, evidence, self.kb.chunks.values())
+        if stat:
+            # A complete logical table may be discovered outside the initial
+            # retrieval set. Promote its representative chunk into evidence so
+            # citations and grounding refer to the actual dataset used.
+            stat_chunk_id = stat.get("chunk_id")
+            stat_chunk = self.kb.chunks.get(stat_chunk_id) if stat_chunk_id else None
+            if stat_chunk is not None and not any(e.chunk.chunk_id == stat_chunk.chunk_id for e in evidence):
+                new_source_id = max((e.source_id for e in evidence), default=0) + 1
+                evidence.append(Evidence(new_source_id, stat_chunk, 1.0))
+                stat["source_id"] = new_source_id
+                stat["text"] = re.sub(r"\[-1\](?=\.)", f"[{new_source_id}]", stat["text"])
+            elif stat.get("source_id", -1) < 0:
+                stat["source_id"] = evidence[-1].source_id
+            stat_result = nx.CalcResult(
+                stat["value"],
+                stat.get("unit", ""),
+                stat["formula"],
+                (stat["source_id"],),
+            )
+            calcs.append(Calc(stat["kind"], stat_result, stat["text"]))
+            facts_text.append(stat["text"])
+            # A verified descriptive statistic is authoritative. Do not mix
+            # unrelated row-level facts from the generic numerical agent into it.
+            offline_body = stat["text"]
         calc_lines = [c.text for c in calcs]
         calc_vals = [v for c in calcs for v in (c.result.value, abs(c.result.value))]
         notice = ""
@@ -74,16 +99,20 @@ class Orchestrator:
             try:
                 raw = self.llm.complete(q, build_context(evidence), "\n".join(calc_lines + facts_text))
                 rep = validate_answer(raw, evidence, calc_values=calc_vals, question=q)
-                if rep.ok:
+                llm_refused = raw.strip() == REFUSAL_MESSAGE or raw.strip().startswith(REFUSAL_MESSAGE)
+                if rep.ok and not llm_refused:
                     answer, mode = raw, "llm"
                 else:
-                    notice = "LLM answer failed grounding validation; showing verified evidence-based answer."
-                    log.warning("validation failed: %s", [i.code for i in rep.issues])
+                    notice = "LLM refused or failed grounding validation; showing verified evidence-based answer."
+                    log.warning("LLM answer rejected: refused=%s issues=%s", llm_refused, [i.code for i in rep.issues])
             except LLMUnavailable as exc:
                 notice = f"LLM unavailable ({exc}); showing evidence-based answer."
         else:
             notice = "Offline mode (no GROQ_API_KEY): deterministic evidence-based answer."
-        if not answer:
+        if stat:
+            answer = offline_body or stat["text"]
+            mode = "offline"
+        elif not answer:
             answer = offline_body or self._extractive(q, evidence)
         rep = validate_answer(answer, evidence, calc_values=calc_vals, question=q)
         sources = format_sources(evidence, rep.cited_sources or [e.source_id for e in evidence[:3]])
